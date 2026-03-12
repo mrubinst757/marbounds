@@ -11,7 +11,7 @@
 #' @param C Character; column name of missingness indicator (1 = missing, 0 = observed).
 #' @param X Character vector; column names of covariates.
 #' @param estimand One of "ate" (average treatment effect), "psi1" (composite ATE), "psi2" (separable direct effect).
-#' @param assumption One of "general", "bounded_delta", "monotonicity_pos", "monotonicity_neg", "bounded_risk", "bounded_risk_unbounded_tau", "bounded_risk_bounded_delta", "point_ate", "point_psi1", "point_psi2".
+#' @param assumption One of "general", "bounded_delta", "monotonicity_pos", "monotonicity_neg", "bounded_risk", "bounded_risk_unbounded_tau", "point_ate", "point_psi1", "point_psi2".
 #'   \describe{
 #'     \item{general}{No extra assumptions; widest bounds (ATE/Psi_1).}
 #'     \item{bounded_delta}{Proportion of informative missingness bounded by delta_0u, delta_1u (and delta_0l, delta_1l for Psi_1).}
@@ -19,7 +19,6 @@
 #'     \item{monotonicity_neg}{Informative missingness decreases outcome risk.}
 #'     \item{bounded_risk}{Outcome risk ratio in informatively missing bounded by tau_0, tau_1, with an upper bound that uses the minimum of 1-mu and mu*(tau-1) (as in the paper).}
 #'     \item{bounded_risk_unbounded_tau}{Original bounded-risk formula without applying the minimum-based tau constraint (provides backward-compatible behavior).}
-#'     \item{bounded_risk_bounded_delta}{Narrower bounds under a bounded-delta assumption (as in \code{bounded_delta}), but also accepts a \code{tau} parameter.}
 #'     \item{point_ate}{Point identification under known tau and delta_0, delta_1 (Assumption known-risk + known-missingness).}
 #'     \item{point_psi1}{Point identification of Psi_1 under known delta_0, delta_1.}
 #'     \item{point_psi2}{Point identification of Psi_2 under known delta_0.}
@@ -64,7 +63,7 @@ mar_bounds <- function(data,
                        C,
                        X,
                        estimand = c("ate", "psi1", "psi2"),
-                       assumption = c("general", "bounded_delta", "monotonicity_pos", "monotonicity_neg", "bounded_risk", "bounded_risk_unbounded_tau", "bounded_risk_bounded_delta", "point_ate", "point_psi1", "point_psi2"),
+                       assumption = c("general", "bounded_delta", "monotonicity_pos", "monotonicity_neg", "bounded_risk", "bounded_risk_unbounded_tau", "point_ate", "point_psi1", "point_psi2"),
                        delta_0u = 1,
                        delta_1u = 1,
                        delta_0l = 0,
@@ -93,9 +92,15 @@ mar_bounds <- function(data,
   # Alias delta parameters: if delta_0/delta_1 provided for bounds assumptions,
   # use them as delta_0u/delta_1u
   if (assumption %in% c("general", "bounded_delta", "monotonicity_pos", "monotonicity_neg",
-                        "bounded_risk", "bounded_risk_unbounded_tau", "bounded_risk_bounded_delta")) {
-    if (!is.null(delta_0)) delta_0u <- delta_0
-    if (!is.null(delta_1)) delta_1u <- delta_1
+                        "bounded_risk", "bounded_risk_unbounded_tau")) {
+    if (!is.null(delta_0) || !is.null(delta_1)) {
+      # Add warning for bounded_risk assumptions
+      if (assumption %in% c("bounded_risk", "bounded_risk_unbounded_tau")) {
+        warning("For ", assumption, ", delta_0 and delta_1 are interpreted as delta_0u and delta_1u (upper bounds on proportion of informative missingness).")
+      }
+      if (!is.null(delta_0)) delta_0u <- delta_0
+      if (!is.null(delta_1)) delta_1u <- delta_1
+    }
   }
 
   # Resolve SuperLearner libraries: default to sl_lib when not provided
@@ -196,7 +201,7 @@ mar_bounds <- function(data,
 
   # Optional: simultaneous bounds/estimates over a parameter grid (ATE, Psi_1, Psi_2)
   grid_ok_ate <- estimand == "ate" &&
-    assumption %in% c("general", "bounded_delta", "bounded_risk_bounded_delta", "bounded_risk_unbounded_tau", "monotonicity_pos", "monotonicity_neg", "bounded_risk", "point_ate")
+    assumption %in% c("general", "bounded_delta", "bounded_risk_unbounded_tau", "monotonicity_pos", "monotonicity_neg", "bounded_risk", "point_ate")
   grid_ok_psi1 <- estimand == "psi1" && assumption %in% c("bounded_delta", "point_psi1")
   grid_ok_psi2 <- estimand == "psi2" && assumption == "point_psi2"
   if (!is.null(param_grid) && (grid_ok_ate || grid_ok_psi1 || grid_ok_psi2)) {
@@ -403,7 +408,7 @@ mar_bounds_grid_bands <- function(phi,
       if (bound_type == "lower") return(coef_mono_neg_lower_ate(delta_1u))
       return(coef_mono_neg_upper_ate(delta_0u))
     }
-    if (assumption %in% c("bounded_delta", "bounded_risk_bounded_delta")) {
+    if (assumption == "bounded_delta") {
       if (bound_type == "lower") return(coef_delta_lower_ate(delta_0u, delta_1u))
       return(coef_delta_upper_ate(delta_0u, delta_1u))
     }
@@ -454,7 +459,7 @@ mar_bounds_grid_bands <- function(phi,
     if (assumption == "point_psi1" && !is.null(delta_0) && !is.null(delta_1)) {
       return(coef_point_psi1(delta_0, delta_1))
     }
-    if (assumption %in% c("bounded_delta", "bounded_risk_bounded_delta")) {
+    if (assumption == "bounded_delta") {
       if (bound_type == "lower") return(coef_lower_psi1(delta_1l, delta_0u))
       return(coef_upper_psi1(delta_1u, delta_0l))
     }
@@ -608,7 +613,7 @@ mar_bounds_grid_bands <- function(phi,
       return(res)
     }
 
-    if (assumption %in% c("bounded_delta", "bounded_risk_bounded_delta")) {
+    if (assumption %in% c("bounded_delta", "")) {
       if (grid_bounds %in% c("both", "lower")) {
         lower_estimates <- numeric(n_grid)
         lower_psi <- matrix(NA_real_, nrow = n, ncol = n_grid)

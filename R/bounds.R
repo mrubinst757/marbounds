@@ -88,7 +88,7 @@ coef_point_psi1 <- function(delta_0, delta_1) {
 #' @return List with elements estimate, lower, upper (as appropriate), and optional se_* for asymptotic SEs.
 compute_bounds <- function(phi,
                           estimand = c("ate", "psi1", "psi2"),
-                          assumption = c("general", "bounded_delta", "monotonicity_pos", "monotonicity_neg", "bounded_risk", "bounded_risk_unbounded_tau", "bounded_risk_bounded_delta", "point_ate", "point_psi1", "point_psi2"),
+                          assumption = c("general", "bounded_delta", "monotonicity_pos", "monotonicity_neg", "bounded_risk", "bounded_risk_unbounded_tau", "point_ate", "point_psi1", "point_psi2"),
                           delta_0u = 1, delta_1u = 1,
                           delta_0l = 0, delta_1l = 0,
                           delta_0 = NULL, delta_1 = NULL,
@@ -122,7 +122,7 @@ compute_bounds <- function(phi,
       U <- get_est(bu)
       return(list(naive = th[2] - th[1], lower = L$est, upper = U$est, se_lower = L$se, se_upper = U$se))
     }
-    if (assumption %in% c("bounded_delta", "bounded_risk_bounded_delta")) {
+    if (assumption == "bounded_delta") {
       bl <- coef_delta_lower_ate(delta_0u, delta_1u)
       bu <- coef_delta_upper_ate(delta_0u, delta_1u)
       L <- get_est(bl)
@@ -195,7 +195,7 @@ compute_bounds <- function(phi,
       U <- get_est(bu)
       return(list(naive = th[2] - th[1], lower = L$est, upper = U$est, se_lower = L$se, se_upper = U$se))
     }
-    if (assumption %in% c("bounded_delta", "bounded_risk_bounded_delta")) {
+    if (assumption == "bounded_delta") {
       bl <- coef_lower_psi1(delta_1l, delta_0u)
       bu <- coef_upper_psi1(delta_1u, delta_0l)
       L <- get_est(bl)

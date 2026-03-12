@@ -159,3 +159,35 @@ test_that("mar_bounds param_grid returns estimate_grid for Psi_2 point_psi2", {
   expect_true(all(c("estimate", "se_pointwise", "se_uniform", "ci_lower_uniform", "ci_upper_uniform") %in% names(g)))
   expect_equal(nrow(g), 3L)
 })
+
+test_that("mar_bounds warns when delta_0/delta_1 used with bounded_risk assumptions", {
+  skip_if_not_installed("SuperLearner")
+  suppressPackageStartupMessages(library(SuperLearner))
+  dat <- make_test_data(n = 80)
+
+  # Should warn for bounded_risk
+  expect_warning(
+    mar_bounds(dat, Y = "Y", A = "A", C = "C", X = "X",
+               estimand = "ate", assumption = "bounded_risk",
+               delta_0 = 0.8, delta_1 = 0.8, tau_0 = 2, tau_1 = 2,
+               V = 2, seed = 1),
+    "delta_0 and delta_1 are interpreted as delta_0u and delta_1u"
+  )
+
+  # Should warn for bounded_risk_unbounded_tau
+  expect_warning(
+    mar_bounds(dat, Y = "Y", A = "A", C = "C", X = "X",
+               estimand = "ate", assumption = "bounded_risk_unbounded_tau",
+               delta_0 = 0.8, delta_1 = 0.8, tau_0 = 2, tau_1 = 2,
+               V = 2, seed = 1),
+    "delta_0 and delta_1 are interpreted as delta_0u and delta_1u"
+  )
+
+  # Should NOT warn for other assumptions (delta aliasing is intentional there)
+  expect_no_warning(
+    mar_bounds(dat, Y = "Y", A = "A", C = "C", X = "X",
+               estimand = "ate", assumption = "general",
+               delta_0 = 0.8, delta_1 = 0.8,
+               V = 2, seed = 1)
+  )
+})
