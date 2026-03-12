@@ -1,15 +1,13 @@
 # marbounds
 
-R package implementing bounds on causal effects when outcomes are missing under a mixture of informative and non-informative missingness (see paper: *Bounding causal effects with an unknown mixture of informative and non-informative missingness*).
+R package implementing bounds on causal effects when outcomes are missing under a mixture of informative and non-informative missingness (see paper: *Bounding causal effects with an unknown mixture of informative and non-informative missingness* https://arxiv.org/pdf/2411.16902).
 
-## Features
+## Key features
 
 - **Generic data interface**: Provide a `data.frame` with columns for outcome `Y`, treatment `A`, missingness indicator `C`, and covariates `X`.
 - **Nuisance estimation**: SuperLearner with user-specified libraries and V-fold cross-fitting for propensity score, missingness probabilities, and outcome regressions.
 - **User-specified estimand**: Average treatment effect (ATE), composite ATE (Ψ₁), or separable direct effect (Ψ₂).
 - **User-specified assumptions**: General bounds, bounded proportion of informative missingness (δ), monotonicity (positive/negative), bounded outcome risk (τ), or point identification under known sensitivity parameters.
-- **Legacy bounded-risk option**: Use `bounded_risk_unbounded_tau` to reproduce the original bounded-risk formula (without the min{1-μ, μ(τ−1)} tau constraint).
-- **Tipping point analysis**: Find sensitivity parameter values (e.g. δ or τ) at which the bound crosses a target (e.g. 0), i.e. the “tipping point” that would explain away the naive association.
 - **Multiplier bootstrap**: Simultaneous inference over a grid of sensitivity parameters via multiplier bootstrap.
 
 ## Installation
@@ -42,24 +40,22 @@ dat <- data.frame(Y = Y, A = A, C = C, X = X)
 fit <- mar_bounds(dat, Y = "Y", A = "A", C = "C", X = "X",
                   estimand = "ate", assumption = "general",
                   sl_lib_prop = "SL.glm", sl_lib_miss = "SL.glm", sl_lib_outcome = "SL.glm")
-fit$naive
-fit$lower
-fit$upper
 
-# Bounds under monotonicity with delta_1u = delta_0u = 0.8
+fit$result
+
 fit2 <- mar_bounds(dat, Y = "Y", A = "A", C = "C", X = "X",
-                   estimand = "ate", assumption = "monotonicity_pos",
-                   delta_0u = 0.8, delta_1u = 0.8,
-                   sl_lib_prop = "SL.glm", sl_lib_miss = "SL.glm", sl_lib_outcome = "SL.glm")
-
-# Tipping point: grid of (delta_0u, delta_1u) where upper bound crosses 0
-tp <- tipping_point(fit2, bound_type = "upper", assumption = "monotonicity_pos")
-
-# Multiplier bootstrap over a grid of deltas
-mb <- multiplier_bootstrap_grid(fit2, param_grid = list(delta_0u = seq(0.2, 1, 0.2), delta_1u = seq(0.2, 1, 0.2)),
-                                bound_spec = "upper", assumption = "monotonicity_pos", B = 500)
+                   assumption = "bounded_risk",
+                   param_grid = list(
+                     delta_0u = seq(0.5, 1, 0.1),
+                     delta_1u = seq(0.5, 1, 0.1),
+                     tau_1 = seq(1.5, 5, 0.5),
+                     tau_0 = seq(1.5, 5, 0.5)
+                   ),
+                   sl_lib = "SL.glm")
+# Check the dataframe output
+fit2$result
 ```
 
 ## Reference
 
-Methods and notation follow the paper (main.tex / appendix) on bounding causal effects under mixed informative and non-informative missingness, with influence-function-based estimation and cross-fitting.
+Methods and notation follow the paper on bounding causal effects under mixed informative and non-informative missingness, with influence-function-based estimation and cross-fitting. Note: by default, the bounded_risk option uses the method that assumes $\mu_a^\star/\mu_a \le \min(1/\mu_a, \tau_a)$, outlined in detail the Appendix. The option in the main paper may be recovered using the ``bounded_risk_unbounded_tau'' option.
