@@ -85,6 +85,8 @@ coef_point_psi1 <- function(delta_0, delta_1) {
 #' @param delta_0,delta_1 Point values (for point identification).
 #' @param tau_0,tau_1 Bounded risk ratio params (for bounded_risk); single tau for point_ate.
 #' @param mu0,mu1,pi0,pi1 Nuisance functions (n-vectors) for bounded_risk and point_psi2.
+#' @param smooth_approximation Logical; for psi2 bounded_delta, use smooth approximation (TRUE) or indicator method (FALSE).
+#' @param epsilon Smoothing parameter for psi2 smooth approximation.
 #' @return List with elements estimate, lower, upper (as appropriate), and optional se_* for asymptotic SEs.
 compute_bounds <- function(phi,
                           estimand = c("ate", "psi1", "psi2"),
@@ -95,7 +97,9 @@ compute_bounds <- function(phi,
                           tau_0 = NULL, tau_1 = NULL,
                           tau = NULL,
                           mu0 = NULL, mu1 = NULL,
-                          pi0 = NULL, pi1 = NULL) {
+                          pi0 = NULL, pi1 = NULL,
+                          smooth_approximation = FALSE,
+                          epsilon = 0.001) {
   estimand <- match.arg(estimand)
   assumption <- match.arg(assumption)
   n <- nrow(phi)
@@ -218,8 +222,85 @@ compute_bounds <- function(phi,
       se <- sqrt(stats::var(psi2_vec) / n)
       return(list(estimate = est, se = se, naive = th[2] - th[1]))
     }
-    # Bounds for Psi_2 (ell_2, u_2) use smooth approximation Phi_epsilon; we expose via separate function
-    return(list(naive = th[2] - th[1], message = "Use psi2_bounds_smooth() for Psi_2 bounds"))
+    if (assumption == "bounded_delta") {
+      if (is.null(mu0) || is.null(mu1) || is.null(pi0)) {
+        stop("For psi2 bounded_delta provide mu0, mu1, and pi0.")
+      }
+
+      if (smooth_approximation) {
+        # Smooth approximation method using Phi_epsilon (corrected formulas v2)
+        phi_cdf_lower <- stats::pnorm((mu1 - mu0) / epsilon)  # Φ_ε(μ_1 - μ_0) for lower
+        phi_cdf_upper <- stats::pnorm((mu0 - mu1) / epsilon)  # Φ_ε(μ_0 - μ_1) for upper
+
+        # Components for smooth approximation
+        # phi columns: phi_1_0, phi_1_1, phi_2_0, phi_2_1, phi_3_0, phi_3_1
+        phi1_0 <- phi[, 1]
+        phi1_1 <- phi[, 2]
+        phi2_0 <- phi[, 3]
+
+        # Need Y, A, C, e1, pi1 for doubly-robust term
+        # Extract from influence matrix components
+        # DR term = I{C=0,A=1}/((1-π_1)e_1)(Y-μ_1) - I{C=0,A=0}/((1-π_0)e_0)(Y-μ_0)
+        # Note: phi1_1 - phi1_0 = DR_term + (mu1 - mu0), so DR_term = phi1_1 - phi1_0 - (mu1 - mu0)
+        dr_term <- phi1_1 - phi1_0 - (mu1 - mu0)
+
+        # Lower bound smooth: uses Φ_ε(μ_1 - μ_0)
+        lb_vec <- phi1_1 - phi1_0 -
+                  dr_term * pi0 * phi_cdf_lower -
+                  (phi2_0 - pi0) * (mu1 - mu0) * phi_cdf_lower -
+                  (mu1 - mu0) * pi0 * phi_cdf_lower * (phi1_1 - phi1_0 - mu1 + mu0) -
+                  (mu1 - mu0) * pi0 * phi_cdf_lower
+
+        # Upper bound smooth: uses Φ_ε(μ_0 - μ_1)
+        ub_vec <- phi1_1 - phi1_0 -
+                  dr_term * pi0 * phi_cdf_upper -
+                  (phi2_0 - pi0) * (mu1 - mu0) * phi_cdf_upper -
+                  (mu1 - mu0) * pi0 * phi_cdf_upper * (phi1_0 - phi1_1 - mu0 + mu1) -
+                  (mu1 - mu0) * pi0 * phi_cdf_upper
+
+        lower <- mean(lb_vec)
+        upper <- mean(ub_vec)
+        se_lower <- sqrt(stats::var(lb_vec) / n)
+        se_upper <- sqrt(stats::var(ub_vec) / n)
+
+        return(list(naive = th[2] - th[1], lower = lower, upper = upper, se_lower = se_lower, se_upper = se_upper))
+      } else {
+        # Indicator function method (default) - corrected formulas v2
+        # ℓ_2: uses I(μ_1 > μ_0)
+        # u_2: uses I(μ_1 ≤ μ_0)
+
+        ind_mu1_le_mu0 <- (mu1 <= mu0)
+        ind_mu1_gt_mu0 <- (mu1 > mu0)
+
+        # φ columns: phi_1_0, phi_1_1, phi_2_0, phi_2_1, phi_3_0, phi_3_1
+        phi1_0 <- phi[, 1]
+        phi1_1 <- phi[, 2]
+        phi2_0 <- phi[, 3]
+
+        # Doubly-robust term: phi1_1 - phi1_0 - (mu1 - mu0)
+        dr_term <- phi1_1 - phi1_0 - (mu1 - mu0)
+
+        # Lower bound: I(μ_1 > μ_0)
+        lb_vec <- phi1_1 - phi1_0 -
+                  dr_term * pi0 * ind_mu1_gt_mu0 -
+                  (phi2_0 - pi0) * (mu1 - mu0) * ind_mu1_gt_mu0 -
+                  (mu1 - mu0) * pi0 * ind_mu1_gt_mu0
+
+        # Upper bound: I(μ_1 ≤ μ_0)
+        ub_vec <- phi1_1 - phi1_0 -
+                  dr_term * pi0 * ind_mu1_le_mu0 -
+                  (phi2_0 - pi0) * (mu1 - mu0) * ind_mu1_le_mu0 -
+                  (mu1 - mu0) * pi0 * ind_mu1_le_mu0
+
+        lower <- mean(lb_vec)
+        upper <- mean(ub_vec)
+        se_lower <- sqrt(stats::var(lb_vec) / n)
+        se_upper <- sqrt(stats::var(ub_vec) / n)
+
+        return(list(naive = th[2] - th[1], lower = lower, upper = upper, se_lower = se_lower, se_upper = se_upper))
+      }
+    }
+    return(list(naive = th[2] - th[1], message = "Psi_2 bounds only supported for bounded_delta assumption"))
   }
 
   stop("Unsupported estimand/assumption combination.")

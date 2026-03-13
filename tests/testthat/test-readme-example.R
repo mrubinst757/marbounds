@@ -15,11 +15,9 @@ test_that("README example runs without error", {
   expect_true(fit$lower <= fit$upper)
   fit2 <- mar_bounds(dat, Y = "Y", A = "A", C = "C", X = "X",
                      estimand = "ate", assumption = "monotonicity_pos",
-                     delta_0u = 0.8, delta_1u = 0.8)
-  tp <- tipping_point(fit2, bound_type = "upper", assumption = "monotonicity_pos")
-  expect_true("grid" %in% names(tp))
-  mb <- multiplier_bootstrap_grid(fit2,
-                                  param_grid = list(delta_0u = seq(0.2, 1, 0.2), delta_1u = seq(0.2, 1, 0.2)),
-                                  bound_spec = "upper", assumption = "monotonicity_pos", B = 50)
-  expect_true("grid" %in% names(mb))
+                     delta_0u = 0.8, delta_1u = 0.8,
+                     param_grid = list(delta_0u = seq(0.2, 1, 0.2), delta_1u = seq(0.2, 1, 0.2)),
+                     B = 50)
+  expect_true("upper_grid" %in% names(fit2))
+  expect_true("grid" %in% names(fit2$upper_grid))
 })

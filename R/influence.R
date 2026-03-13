@@ -20,8 +20,8 @@ influence_functions <- function(Y, A, C, e, pi0, pi1, mu0, mu1) {
   pi1 <- clip_probs(pi1)
 
   # phi_1,a: E(mu_a)
-  p1_0 <- (1 - (C == 0 & A == 0)) * 0 + (C == 0 & A == 0) * (Y_ - mu0) / ((1 - pi0) * e0) + mu0
-  p1_1 <- (1 - (C == 0 & A == 1)) * 0 + (C == 0 & A == 1) * (Y_ - mu1) / ((1 - pi1) * e1) + mu1
+  p1_0 <- (C == 0 & A == 0) * (Y_ - mu0) / ((1 - pi0) * e0) + mu0
+  p1_1 <- (C == 0 & A == 1) * (Y_ - mu1) / ((1 - pi1) * e1) + mu1
 
   # phi_2,a: E(pi_a)
   p2_0 <- (A == 0) * (C - pi0) / e0 + pi0

@@ -13,6 +13,8 @@
 #' @param sl_lib_prop Character vector of SuperLearner library for propensity e (default "SL.glm").
 #' @param sl_lib_miss Character vector of SuperLearner library for missingness pi_0, pi_1 (default "SL.glm").
 #' @param sl_lib_outcome Character vector of SuperLearner library for outcome mu_0, mu_1 (default "SL.glm").
+#' @param stratify_mu Logical; if TRUE (default), estimate separate outcome models mu_0 and mu_1 stratified by treatment A. If FALSE, estimate a single pooled model E(Y|X,C=0) and predict for both A=0 and A=1.
+#' @param family_Y Character; family for outcome model ("gaussian" or "binomial"). Default "gaussian".
 #' @param seed Optional seed for fold splits.
 #' @return List with components: e, pi0, pi1, mu0, mu1 (each length n), and fold_id (fold index per row).
 #' @export
@@ -21,6 +23,8 @@ estimate_nuisance <- function(X, A, C, Y,
                               sl_lib_prop = "SL.glm",
                               sl_lib_miss = "SL.glm",
                               sl_lib_outcome = "SL.glm",
+                              stratify_mu = TRUE,
+                              family_Y = "gaussian",
                               seed = NULL) {
   if (!requireNamespace("SuperLearner", quietly = TRUE)) {
     stop("Package 'SuperLearner' is required. Install with install.packages('SuperLearner').")
@@ -57,7 +61,7 @@ estimate_nuisance <- function(X, A, C, Y,
         newX = as.data.frame(Xeval),
         family = "binomial",
         SL.library = sl_lib_prop,
-        cvControl = list(V = cv_v)
+        cvControl = list(V = 1)
       )
       e[eval] <- clip_probs(fit_e$SL.predict)
     }
@@ -77,31 +81,59 @@ estimate_nuisance <- function(X, A, C, Y,
         newX = as.data.frame(Xeval),
         family = "binomial",
         SL.library = sl_lib_miss,
-        cvControl = list(V = cv_v_a)
+        cvControl = list(V = 1)
       )
       if (a == 0) pi0[eval] <- clip_probs(fit_pi$SL.predict) else pi1[eval] <- clip_probs(fit_pi$SL.predict)
     }
 
     # Outcome: E(Y|X,A=a,C=0) for a=0,1
-    for (a in 0:1) {
-      ia <- train & (A == a) & (C == 0)
-      n_ia <- sum(ia)
-      if (n_ia < 2L) {
-        if (a == 0) mu0[eval] <- mean(Y[A == 0 & C == 0], na.rm = TRUE) else mu1[eval] <- mean(Y[A == 1 & C == 0], na.rm = TRUE)
-        next
+    if (stratify_mu) {
+      # Stratified: separate models for A=0 and A=1
+      for (a in 0:1) {
+        ia <- train & (A == a) & (C == 0)
+        n_ia <- sum(ia)
+        if (n_ia < 2L) {
+          if (a == 0) mu0[eval] <- mean(Y[A == 0 & C == 0], na.rm = TRUE) else mu1[eval] <- mean(Y[A == 1 & C == 0], na.rm = TRUE)
+          next
+        }
+        fit_mu <- SuperLearner::SuperLearner(
+          Y = Y[ia],
+          X = as.data.frame(X[ia, , drop = FALSE]),
+          newX = as.data.frame(Xeval),
+          family = family_Y,
+          SL.library = sl_lib_outcome,
+          cvControl = list(V = 1)
+        )
+        pred <- fit_mu$SL.predict
+        if (family_Y == "gaussian") {
+          pred <- pmax(0, pmin(1, pred))  # bounded outcome for gaussian
+        }
+        if (a == 0) mu0[eval] <- pred else mu1[eval] <- pred
       }
-      cv_v_a <- min(2L, max(1L, n_ia))
-      fit_mu <- SuperLearner::SuperLearner(
-        Y = Y[ia],
-        X = as.data.frame(X[ia, , drop = FALSE]),
-        newX = as.data.frame(Xeval),
-        family = "gaussian",
-        SL.library = sl_lib_outcome,
-        cvControl = list(V = cv_v_a)
-      )
-      pred <- fit_mu$SL.predict
-      pred <- pmax(0, pmin(1, pred))  # bounded outcome
-      if (a == 0) mu0[eval] <- pred else mu1[eval] <- pred
+    } else {
+      # Pooled: single model E(Y|X, C=0)
+      io <- train & (C == 0)
+      n_io <- sum(io)
+      if (n_io < 2L) {
+        mu_pooled <- mean(Y[C == 0], na.rm = TRUE)
+        mu0[eval] <- mu_pooled
+        mu1[eval] <- mu_pooled
+      } else {
+        fit_mu_pooled <- SuperLearner::SuperLearner(
+          Y = Y[io],
+          X = as.data.frame(X[io, , drop = FALSE]),
+          newX = as.data.frame(Xeval),
+          family = family_Y,
+          SL.library = sl_lib_outcome,
+          cvControl = list(V = 1)
+        )
+        pred <- fit_mu_pooled$SL.predict
+        if (family_Y == "gaussian") {
+          pred <- pmax(0, pmin(1, pred))  # bounded outcome for gaussian
+        }
+        mu0[eval] <- pred
+        mu1[eval] <- pred
+      }
     }
   }
 

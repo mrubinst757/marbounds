@@ -191,3 +191,100 @@ test_that("mar_bounds warns when delta_0/delta_1 used with bounded_risk assumpti
                V = 2, seed = 1)
   )
 })
+
+test_that("psi2 bounded_delta returns bounds with indicator method", {
+  skip_if_not_installed("SuperLearner")
+  suppressPackageStartupMessages(library(SuperLearner))
+  dat <- make_test_data(n = 100)
+
+  fit <- mar_bounds(dat, Y = "Y", A = "A", C = "C", X = "X",
+                    estimand = "psi2", assumption = "bounded_delta",
+                    delta_0u = 0.8,
+                    V = 2, sl_lib = "SL.glm", seed = 1)
+
+  expect_true("lower" %in% names(fit$result))
+  expect_true("upper" %in% names(fit$result))
+  expect_true(fit$result$lower <= fit$result$upper)
+  expect_true(is.finite(fit$result$lower))
+  expect_true(is.finite(fit$result$upper))
+})
+
+test_that("psi2 bounded_delta with smooth approximation", {
+  skip_if_not_installed("SuperLearner")
+  suppressPackageStartupMessages(library(SuperLearner))
+  dat <- make_test_data(n = 100)
+
+  fit <- mar_bounds(dat, Y = "Y", A = "A", C = "C", X = "X",
+                    estimand = "psi2", assumption = "bounded_delta",
+                    delta_0u = 0.8, smooth_approximation = TRUE,
+                    epsilon = 0.01,
+                    V = 2, sl_lib = "SL.glm", seed = 1)
+
+  expect_true("lower" %in% names(fit$result))
+  expect_true("upper" %in% names(fit$result))
+  expect_true(fit$result$lower <= fit$result$upper)
+})
+
+test_that("stratify_mu = FALSE uses pooled outcome model", {
+  skip_if_not_installed("SuperLearner")
+  suppressPackageStartupMessages(library(SuperLearner))
+  dat <- make_test_data(n = 100)
+
+  fit_stratified <- mar_bounds(dat, Y = "Y", A = "A", C = "C", X = "X",
+                                estimand = "ate", assumption = "general",
+                                stratify_mu = TRUE,
+                                V = 2, sl_lib = "SL.glm", seed = 1)
+
+  fit_pooled <- mar_bounds(dat, Y = "Y", A = "A", C = "C", X = "X",
+                           estimand = "ate", assumption = "general",
+                           stratify_mu = FALSE,
+                           V = 2, sl_lib = "SL.glm", seed = 1)
+
+  # Results should differ when stratification matters
+  expect_true(is.finite(fit_stratified$result$lower))
+  expect_true(is.finite(fit_pooled$result$lower))
+})
+
+test_that("binary Y auto-detection warns and sets family to binomial", {
+  skip_if_not_installed("SuperLearner")
+  suppressPackageStartupMessages(library(SuperLearner))
+  dat <- make_test_data(n = 100)
+
+  # Y is binary, should warn
+  expect_warning(
+    mar_bounds(dat, Y = "Y", A = "A", C = "C", X = "X",
+               estimand = "ate", assumption = "general",
+               family_Y = "gaussian",  # explicitly set to gaussian
+               V = 2, sl_lib = "SL.glm", seed = 1),
+    "binary.*binomial"
+  )
+})
+
+test_that("redundant fields removed from output when result dataframe exists", {
+  skip_if_not_installed("SuperLearner")
+  suppressPackageStartupMessages(library(SuperLearner))
+  dat <- make_test_data(n = 100)
+
+  # Point estimate
+  fit_point <- mar_bounds(dat, Y = "Y", A = "A", C = "C", X = "X",
+                          estimand = "ate", assumption = "point_ate",
+                          delta_0 = 0.5, delta_1 = 0.5, tau = 2,
+                          V = 2, sl_lib = "SL.glm", seed = 1)
+
+  expect_true("result" %in% names(fit_point))
+  expect_false("estimate" %in% names(fit_point))  # should be removed
+  expect_false("se" %in% names(fit_point))  # should be removed
+  expect_false("naive" %in% names(fit_point))  # should be removed
+
+  # Bounds
+  fit_bounds <- mar_bounds(dat, Y = "Y", A = "A", C = "C", X = "X",
+                           estimand = "ate", assumption = "general",
+                           delta_0 = 0.8, delta_1 = 0.8,
+                           V = 2, sl_lib = "SL.glm", seed = 1)
+
+  expect_true("result" %in% names(fit_bounds))
+  expect_false("lower" %in% names(fit_bounds))  # should be removed
+  expect_false("upper" %in% names(fit_bounds))  # should be removed
+  expect_false("se_lower" %in% names(fit_bounds))  # should be removed
+  expect_false("se_upper" %in% names(fit_bounds))  # should be removed
+})

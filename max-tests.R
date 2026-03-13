@@ -12,10 +12,12 @@ dat <- data.frame(Y = Y, A = A, C = C, X = X)
 
 # General bounds on ATE (no extra assumptions)
 fit0 <- mar_bounds(dat, Y = "Y", A = "A", C = "C", X = "X",
-                  estimand = "ate", assumption = "general",
-                  sl_lib = "SL.glm")
-
-c(fit0$naive, fit0$lower, fit0$upper)
+                  estimand = "psi2",
+                  assumption = "bounded_delta",
+                  delta_0 = 1,
+                  sl_lib = "SL.glm",
+                  family_Y = "binomial",
+                  smooth_approximation = FALSE)
 
 # General bounds on ATE: \delta = 0.8
 # Testing delta aliasing: delta_0/delta_1 should be treated as delta_0u/delta_1u for bounds

@@ -1,4 +1,4 @@
-#' Coverage simulation for pointwise and uniform CIs (tipping_point inference)
+#' Coverage simulation for pointwise and uniform CIs (mar_bounds param_grid inference)
 #'
 #' Uses a known DGP to compute true bounds (via large-MC theta), then checks
 #' empirical coverage of pointwise and uniform CIs over replicates.
@@ -97,29 +97,26 @@ run_coverage_simulation <- function(n = 800,
         sim$data, Y = "Y", A = "A", C = "C", X = "X",
         estimand = "ate", assumption = assumption,
         delta_0u = 1, delta_1u = 1,
+        param_grid = param_grid,
+        grid_bounds = if (bound_type == "lower") "lower" else "upper",
+        alpha = alpha, B = B_boot,
         V = 3, sl_lib_prop = "SL.glm", sl_lib_miss = "SL.glm", sl_lib_outcome = "SL.glm"
       ),
       error = function(e) NULL
     )
-    if (is.null(fit) || is.null(fit$phi)) {
+    if (is.null(fit)) {
       pointwise_covered[r, ] <- NA
       uniform_covered[r] <- NA
       next
     }
-    tp <- tryCatch(
-      marbounds::tipping_point(
-        fit, bound_type = bound_type, assumption = assumption,
-        param_grid = param_grid, inference = "both",
-        alpha = alpha, B = B_boot
-      ),
-      error = function(e) NULL
-    )
-    if (is.null(tp)) {
+    # Extract grid from appropriate bound
+    grid_obj <- if (bound_type == "lower") fit$lower_grid else fit$upper_grid
+    if (is.null(grid_obj)) {
       pointwise_covered[r, ] <- NA
       uniform_covered[r] <- NA
       next
     }
-    g <- tp$grid
+    g <- grid_obj$grid
     for (j in seq_len(n_grid)) {
       pointwise_covered[r, j] <- (true_bounds[j] >= g$ci_lower_pointwise[j] &
                                    true_bounds[j] <= g$ci_upper_pointwise[j])

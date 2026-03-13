@@ -35,6 +35,10 @@
 #' @param sl_lib_prop,sl_lib_miss,sl_lib_outcome Optional SuperLearner libraries for
 #'   propensity, missingness, and outcome models. If \code{NULL}, they fall back to
 #'   \code{sl_lib}.
+#' @param stratify_mu Logical; if TRUE (default), estimate separate outcome models for A=0 and A=1. If FALSE, estimate a single pooled model E(Y|X,C=0).
+#' @param family_Y Character; family for outcome model ("gaussian" or "binomial"). If NULL (default), automatically detects: "binomial" for binary Y (only 0/1 values), otherwise "gaussian". Set explicitly to override auto-detection.
+#' @param smooth_approximation Logical; for Psi_2 bounds under bounded_delta, use smooth approximation (TRUE) or indicator function method (FALSE, default).
+#' @param epsilon Smoothing parameter for Psi_2 smooth approximation (default 0.001). Only used when smooth_approximation = TRUE.
 #' @param seed Optional seed for cross-fitting splits.
 #' @param param_grid Optional list or data.frame describing a grid of sensitivity
 #'   parameters for which to compute bounds and/or point estimates and confidence
@@ -78,6 +82,10 @@ mar_bounds <- function(data,
                        sl_lib_prop = NULL,
                        sl_lib_miss = NULL,
                        sl_lib_outcome = NULL,
+                       stratify_mu = TRUE,
+                       family_Y = NULL,
+                       smooth_approximation = FALSE,
+                       epsilon = 0.001,
                        seed = NULL,
                        param_grid = NULL,
                        grid_bounds = c("both", "lower", "upper"),
@@ -115,6 +123,22 @@ mar_bounds <- function(data,
   X_mat <- prep$X_mat
   n <- prep$n
 
+  # Auto-detect binary outcome if family_Y not specified
+  if (is.null(family_Y)) {
+    Y_obs <- Y_vec[!is.na(Y_vec)]
+    if (length(Y_obs) > 0) {
+      is_binary <- all(Y_obs %in% c(0, 1))
+      if (is_binary) {
+        message("Y appears to be binary (only 0/1 values). Automatically setting family_Y = 'binomial'. To override, explicitly set family_Y = 'gaussian'.")
+        family_Y <- "binomial"
+      } else {
+        family_Y <- "gaussian"
+      }
+    } else {
+      family_Y <- "gaussian"
+    }
+  }
+
   # Default sample splitting: V = 2, but if only SL.glm is used everywhere and V was
   # not explicitly set by the user, use V = 1.
   V_cf <- V
@@ -135,6 +159,8 @@ mar_bounds <- function(data,
     sl_lib_prop = sl_lib_prop,
     sl_lib_miss = sl_lib_miss,
     sl_lib_outcome = sl_lib_outcome,
+    stratify_mu = stratify_mu,
+    family_Y = family_Y,
     seed = seed
   )
 
@@ -166,7 +192,9 @@ mar_bounds <- function(data,
     out <- compute_bounds(
       phi, estimand = estimand, assumption = assumption,
       delta_0 = delta_0, delta_1 = delta_1,
-      pi0 = nuis$pi0, mu1 = nuis$mu1
+      pi0 = nuis$pi0, mu1 = nuis$mu1,
+      smooth_approximation = smooth_approximation,
+      epsilon = epsilon
     )
   } else if (assumption == "bounded_risk") {
     out <- compute_bounds(
@@ -179,7 +207,9 @@ mar_bounds <- function(data,
       tau_0 = tau_0, tau_1 = tau_1,
       tau = tau,
       mu0 = nuis$mu0, mu1 = nuis$mu1,
-      pi0 = nuis$pi0, pi1 = nuis$pi1
+      pi0 = nuis$pi0, pi1 = nuis$pi1,
+      smooth_approximation = smooth_approximation,
+      epsilon = epsilon
     )
   } else {
     out <- compute_bounds(
@@ -190,7 +220,11 @@ mar_bounds <- function(data,
       delta_0l = delta_0l, delta_1l = delta_1l,
       delta_0 = delta_0, delta_1 = delta_1,
       tau_0 = tau_0, tau_1 = tau_1,
-      tau = tau
+      tau = tau,
+      mu0 = nuis$mu0, mu1 = nuis$mu1,
+      pi0 = nuis$pi0, pi1 = nuis$pi1,
+      smooth_approximation = smooth_approximation,
+      epsilon = epsilon
     )
   }
 
@@ -253,6 +287,10 @@ mar_bounds <- function(data,
         ci_lower = out$estimate - z * out$se,
         ci_upper = out$estimate + z * out$se
       )
+      # Clean up redundant fields now in result dataframe
+      out$naive <- NULL
+      out$estimate <- NULL
+      out$se <- NULL
     } else if (!is.null(out$lower) && !is.null(out$upper)) {
       # Bounds
       out$result <- data.frame(
@@ -266,6 +304,12 @@ mar_bounds <- function(data,
         ci_upper_lower = out$upper - z * out$se_upper,
         ci_upper_upper = out$upper + z * out$se_upper
       )
+      # Clean up redundant fields now in result dataframe
+      out$naive <- NULL
+      out$lower <- NULL
+      out$upper <- NULL
+      out$se_lower <- NULL
+      out$se_upper <- NULL
     }
   }
 
@@ -613,7 +657,7 @@ mar_bounds_grid_bands <- function(phi,
       return(res)
     }
 
-    if (assumption %in% c("bounded_delta", "")) {
+    if (assumption == "bounded_delta") {
       if (grid_bounds %in% c("both", "lower")) {
         lower_estimates <- numeric(n_grid)
         lower_psi <- matrix(NA_real_, nrow = n, ncol = n_grid)

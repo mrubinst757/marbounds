@@ -99,7 +99,7 @@ multiplier_bootstrap_grid <- function(mar_result,
   ci_lower <- estimates - z * se
   ci_upper <- estimates + z * se
 
-  # Simultaneous: use same construction as tipping_point. Let
+  # Simultaneous: multiplier bootstrap for uniform bands. Let
   #   T*_j = sqrt(n) * mean(G * psi_j),
   # and form C as the (1-alpha) quantile of max_j |T*_j| / sigma_j, where
   # sigma_j^2 = Var(psi_j). Then uniform bands are estimate +/- C * SE_pointwise.
