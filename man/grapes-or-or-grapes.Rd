@@ -14,3 +14,4 @@ x \%||\% y
 \description{
 Default value when argument is NULL
 }
+\keyword{internal}

@@ -11,7 +11,7 @@ Description: Implements influence-function-based estimators for bounds on causal
   user-specified estimands, assumptions, sensitivity parameters, tipping point
   analysis, and multiplier bootstrap over a grid of parameters. Nuisance functions
   are estimated via SuperLearner with cross-fitting.
-License: MIT
+License: MIT + file LICENSE
 Encoding: UTF-8
 Imports:
   SuperLearner,

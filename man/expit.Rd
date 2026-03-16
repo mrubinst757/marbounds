@@ -12,3 +12,4 @@ expit(x)
 \description{
 Expit (inverse logit)
 }
+\keyword{internal}
