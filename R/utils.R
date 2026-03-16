@@ -40,5 +40,5 @@ expit <- function(x) {
 #' Default value when argument is NULL
 #' @param x First argument
 #' @param y Default value to use if x is NULL
-#' @keywords internal
+#' @noRd
 `%||%` <- function(x, y) if (is.null(x)) y else x
