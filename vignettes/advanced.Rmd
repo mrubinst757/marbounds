@@ -60,7 +60,7 @@ You can create ensembles by providing vectors of algorithms:
 
 ```{r}
 # Example data
-set.seed(20240313)
+set.seed(20260313)
 n <- 500
 X <- runif(n, -2, 2)
 A <- rbinom(n, 1, plogis(X))
@@ -457,12 +457,12 @@ stopifnot(all(is.na(dat$Y) == (dat$C == 1)))
 Always set a seed for reproducible results:
 
 ```{r, eval = FALSE}
-fit <- mar_bounds(..., seed = 20240313)  # YYYYMMDD format recommended
+fit <- mar_bounds(..., seed = 20260313)  # YYYYMMDD format recommended
 ```
 
 ## References
 
-Rubinstein, M., Agniel, D., Han, L., Horvitz-Lennon, M., & Normand, S.-L. (2024).
+Rubinstein, M., Agniel, D., Han, L., Horvitz-Lennon, M., & Normand, S.-L. (2026).
 Bounding causal effects with an unknown mixture of informative and non-informative missingness.
 Journal of Causal Inference (Accepted). https://arxiv.org/pdf/2411.16902
 

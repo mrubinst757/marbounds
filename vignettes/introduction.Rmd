@@ -59,7 +59,7 @@ The package requires a `data.frame` with:
 Let's create a simple dataset:
 
 ```{r}
-set.seed(20240313)
+set.seed(20260313)
 n <- 500
 
 # Covariates
@@ -289,6 +289,6 @@ fit_custom <- mar_bounds(
 
 ## References
 
-Rubinstein, M., Agniel, D., Han, L., Horvitz-Lennon, M., & Normand, S.-L. (2024).
+Rubinstein, M., Agniel, D., Han, L., Horvitz-Lennon, M., & Normand, S.-L. (2026).
 Bounding causal effects with an unknown mixture of informative and non-informative missingness.
 Journal of Causal Inference (Accepted). https://arxiv.org/pdf/2411.16902

@@ -18,6 +18,6 @@ Initial release of the marbounds package for bounding causal effects under mixed
 
 ## Reference
 
-Rubinstein, M., Agniel, D., Han, L., Horvitz-Lennon, M., & Normand, S.-L. (2024).
+Rubinstein, M., Agniel, D., Han, L., Horvitz-Lennon, M., & Normand, S.-L. (2026).
 Bounding causal effects with an unknown mixture of informative and non-informative missingness.
 Journal of Causal Inference (Accepted). https://arxiv.org/pdf/2411.16902
