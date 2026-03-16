@@ -83,8 +83,10 @@ coef_point_psi1 <- function(delta_0, delta_1) {
 #' @param delta_0u,delta_1u Upper bounds on proportion informative missingness (for bounded/mono bounds).
 #' @param delta_0l,delta_1l Lower bounds (for Psi_1 bounds).
 #' @param delta_0,delta_1 Point values (for point identification).
-#' @param tau_0,tau_1 Bounded risk ratio params (for bounded_risk); single tau for point_ate.
-#' @param mu0,mu1,pi0,pi1 Nuisance functions (n-vectors) for bounded_risk and point_psi2.
+#' @param tau_0,tau_1 Bounded risk ratio params (for bounded_risk).
+#' @param tau Single sensitivity parameter for point_ate (risk ratio in both arms).
+#' @param mu0,mu1 Outcome nuisance functions (n-vectors).
+#' @param pi0,pi1 Missingness probability nuisance functions (n-vectors).
 #' @param smooth_approximation Logical; for psi2 bounded_delta, use smooth approximation (TRUE) or indicator method (FALSE).
 #' @param epsilon Smoothing parameter for psi2 smooth approximation.
 #' @return List with elements estimate, lower, upper (as appropriate), and optional se_* for asymptotic SEs.

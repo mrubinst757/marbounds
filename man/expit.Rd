@@ -6,6 +6,9 @@
 \usage{
 expit(x)
 }
+\arguments{
+\item{x}{Numeric vector}
+}
 \description{
 Expit (inverse logit)
 }

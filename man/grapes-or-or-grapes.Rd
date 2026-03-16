@@ -6,6 +6,11 @@
 \usage{
 x \%||\% y
 }
+\arguments{
+\item{x}{First argument}
+
+\item{y}{Default value to use if x is NULL}
+}
 \description{
 Default value when argument is NULL
 }
