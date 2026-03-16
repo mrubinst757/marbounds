@@ -22,7 +22,7 @@ test_that("multiplier_bootstrap_grid returns grid with estimates and CIs", {
 test_that("multiplier_bootstrap_grid with point_ate assumption", {
   skip_if_not_installed("SuperLearner")
   suppressPackageStartupMessages(library(SuperLearner))
-  dat <- make_tiny_data(n = 50)
+  dat <- make_tiny_data(n = 100)
   fit <- mar_bounds(dat, Y = "Y", A = "A", C = "C", X = "X",
                     estimand = "ate", assumption = "point_ate",
                     delta_0 = 0.5, delta_1 = 0.5, tau = 2, V = 2, seed = 1)

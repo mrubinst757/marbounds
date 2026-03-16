@@ -123,6 +123,11 @@ mar_bounds <- function(data,
   X_mat <- prep$X_mat
   n <- prep$n
 
+  # Warn about small sample sizes
+  if (n < 100) {
+    warning("Small sample size (n = ", n, "). SuperLearner estimation may be unstable with n < 100. Consider increasing sample size for more reliable results.")
+  }
+
   # Auto-detect binary outcome if family_Y not specified
   if (is.null(family_Y)) {
     Y_obs <- Y_vec[!is.na(Y_vec)]

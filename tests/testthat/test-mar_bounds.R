@@ -31,14 +31,14 @@ test_that("mar_bounds point_ate returns estimate and se", {
 })
 
 test_that("mar_bounds errors on missing required columns", {
-  dat <- make_test_data(n = 30)
+  dat <- make_test_data(n = 100)
   expect_error(mar_bounds(dat, Y = "Y", A = "A", C = "C", X = "Missing"), "exist|undefined columns")
 })
 
 test_that("mar_bounds point_ate errors without delta_0, delta_1, tau", {
   skip_if_not_installed("SuperLearner")
   suppressPackageStartupMessages(library(SuperLearner))
-  dat <- make_test_data(n = 50)
+  dat <- make_test_data(n = 100)
   expect_error(
     mar_bounds(dat, Y = "Y", A = "A", C = "C", X = "X", estimand = "ate", assumption = "point_ate", V = 2),
     "delta_0|delta_1|tau"

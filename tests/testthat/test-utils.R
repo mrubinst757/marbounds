@@ -1,18 +1,18 @@
 test_that("prepare_data returns correct structure and validates inputs", {
-  dat <- make_test_data(n = 50)
+  dat <- make_test_data(n = 100)
   prep <- marbounds:::prepare_data(dat, "Y", "A", "C", "X")
   expect_type(prep, "list")
-  expect_equal(prep$n, 50)
-  expect_equal(length(prep$Y_vec), 50)
-  expect_equal(length(prep$A_vec), 50)
-  expect_equal(length(prep$C_vec), 50)
-  expect_equal(nrow(prep$X_mat), 50)
+  expect_equal(prep$n, 100)
+  expect_equal(length(prep$Y_vec), 100)
+  expect_equal(length(prep$A_vec), 100)
+  expect_equal(length(prep$C_vec), 100)
+  expect_equal(nrow(prep$X_mat), 100)
   expect_equal(ncol(prep$X_mat), 1)
   expect_equal(prep$X_names, "X")
 })
 
 test_that("prepare_data errors on invalid inputs", {
-  dat <- make_test_data(n = 30)
+  dat <- make_test_data(n = 100)
   expect_error(marbounds:::prepare_data(as.list(dat), "Y", "A", "C", "X"), "data.frame")
   expect_error(marbounds:::prepare_data(dat, "Y", "A", "C", "NotACol"), "exist|undefined columns")
   dat_bad <- dat

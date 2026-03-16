@@ -1,0 +1,294 @@
+---
+title: "Introduction to marbounds"
+author: "Max Rubinstein, Denis Agniel, Larry Han, Marcela Horvitz-Lennon, Sharon-Lise Normand"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Introduction to marbounds}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+## Overview
+
+The **marbounds** package implements methods for bounding causal effects when outcomes are missing under a mixture of informative and non-informative missingness. This vignette introduces the basic usage of the package.
+
+### Key Features
+
+- **Generic data interface**: Works with standard `data.frame` objects
+- **Flexible assumptions**: From general bounds to point identification
+- **Multiple estimands**: ATE, composite effects (Ψ₁), separable direct effects (Ψ₂)
+- **SuperLearner integration**: Flexible machine learning for nuisance parameter estimation
+- **Inference**: Asymptotic confidence intervals and multiplier bootstrap for parameter grids
+
+## Installation
+
+```{r, eval = FALSE}
+# Install from source
+install.packages("path/to/marbounds", repos = NULL, type = "source")
+```
+
+Load the package and SuperLearner:
+
+```{r}
+library(marbounds)
+suppressPackageStartupMessages(library(SuperLearner))
+```
+
+## Basic Example
+
+### Data Structure
+
+The package requires a `data.frame` with:
+- `Y`: Outcome variable (may contain `NA` for missing values)
+- `A`: Treatment variable (binary: 0/1)
+- `C`: Missingness indicator (1 = missing, 0 = observed)
+- `X`: Covariates (can be multiple columns)
+
+### Simulated Data
+
+Let's create a simple dataset:
+
+```{r}
+set.seed(20240313)
+n <- 500
+
+# Covariates
+X <- runif(n, -2, 2)
+
+# Treatment (depends on X)
+A <- rbinom(n, 1, plogis(X))
+
+# Missingness (depends on treatment)
+C <- rbinom(n, 1, 0.2 + 0.1 * A)
+
+# Outcome (only observed when C = 0)
+Y <- ifelse(C == 1, NA, rbinom(n, 1, plogis(0.5 * A + 0.3 * X)))
+
+# Create data frame
+dat <- data.frame(Y = Y, A = A, C = C, X = X)
+
+# Summary
+summary(dat)
+cat("\nMissing outcomes:", sum(is.na(dat$Y)), "/", n, "\n")
+```
+
+## Computing Bounds
+
+### General Bounds (No Assumptions)
+
+The most conservative approach makes no assumptions about the missingness mechanism:
+
+```{r}
+fit_general <- mar_bounds(
+  dat,
+  Y = "Y",
+  A = "A",
+  C = "C",
+  X = "X",
+  estimand = "ate",
+  assumption = "general",
+  sl_lib = "SL.glm",
+  V = 2,
+  seed = 1
+)
+
+# View results
+fit_general$result
+```
+
+The output shows:
+- **naive**: Complete-case estimate (assumes MCAR)
+- **lower/upper**: Bounds on the ATE
+- **ci_lower_*/ci_upper_***: Confidence intervals for each bound
+
+### Bounded Proportion of Informative Missingness
+
+If we're willing to assume that at most a proportion δ of the missingness is informative, we can tighten the bounds:
+
+```{r}
+fit_bounded_delta <- mar_bounds(
+  dat,
+  Y = "Y",
+  A = "A",
+  C = "C",
+  X = "X",
+  estimand = "ate",
+  assumption = "general",
+  delta_0 = 0.8,  # At most 80% informative in control group
+  delta_1 = 0.8,  # At most 80% informative in treatment group
+  sl_lib = "SL.glm",
+  V = 2,
+  seed = 1
+)
+
+fit_bounded_delta$result
+```
+
+Notice the bounds are tighter than the general bounds.
+
+### Point Identification
+
+If we know the exact sensitivity parameters (e.g., from a validation study), we can get point identification:
+
+```{r}
+fit_point <- mar_bounds(
+  dat,
+  Y = "Y",
+  A = "A",
+  C = "C",
+  X = "X",
+  estimand = "ate",
+  assumption = "point_ate",
+  delta_0 = 0.5,
+  delta_1 = 0.5,
+  tau = 2,
+  sl_lib = "SL.glm",
+  V = 2,
+  seed = 1
+)
+
+fit_point$result
+```
+
+## Understanding the Output
+
+The main output is a `result` data frame with:
+
+**For point estimates:**
+- `estimate`: Point estimate
+- `se`: Standard error
+- `ci_lower`, `ci_upper`: Confidence interval
+
+**For bounds:**
+- `bound_type`: "lower" or "upper"
+- `estimate`: The bound estimate
+- `se`: Standard error
+- `ci_lower_lower`, `ci_lower_upper`: CI for lower bound
+- `ci_upper_lower`, `ci_upper_upper`: CI for upper bound
+
+## Comparing Assumptions
+
+Let's compare different assumptions:
+
+```{r}
+results <- data.frame(
+  assumption = c("General", "Delta=0.8", "Delta=0.5", "Point ID"),
+  lower = c(
+    fit_general$result$estimate[1],
+    fit_bounded_delta$result$estimate[1],
+    NA,  # Will compute below
+    NA   # Point estimate doesn't have bounds
+  ),
+  upper = c(
+    fit_general$result$estimate[2],
+    fit_bounded_delta$result$estimate[2],
+    NA,
+    NA
+  ),
+  point = c(NA, NA, NA, fit_point$result$estimate)
+)
+
+# Add delta=0.5 bounds
+fit_delta_05 <- mar_bounds(
+  dat, Y = "Y", A = "A", C = "C", X = "X",
+  estimand = "ate", assumption = "general",
+  delta_0 = 0.5, delta_1 = 0.5,
+  sl_lib = "SL.glm", V = 2, seed = 1
+)
+results$lower[3] <- fit_delta_05$result$estimate[1]
+results$upper[3] <- fit_delta_05$result$estimate[2]
+
+print(results)
+```
+
+As we make stronger assumptions (smaller δ), the bounds get tighter until we reach point identification.
+
+## Alternative Estimands
+
+### Composite ATE (Ψ₁)
+
+The composite ATE measures the effect on the composite outcome that combines observed outcomes with the event of missingness:
+
+```{r}
+fit_psi1 <- mar_bounds(
+  dat,
+  Y = "Y",
+  A = "A",
+  C = "C",
+  X = "X",
+  estimand = "psi1",
+  assumption = "bounded_delta",
+  delta_0u = 0.8,
+  delta_1u = 0.8,
+  sl_lib = "SL.glm",
+  V = 2,
+  seed = 1
+)
+
+fit_psi1$result
+```
+
+### Separable Direct Effect (Ψ₂)
+
+The separable direct effect isolates the effect of treatment on the outcome among those who would have observed outcomes regardless of treatment:
+
+```{r}
+fit_psi2 <- mar_bounds(
+  dat,
+  Y = "Y",
+  A = "A",
+  C = "C",
+  X = "X",
+  estimand = "psi2",
+  assumption = "point_psi2",
+  delta_0 = 0.5,
+  sl_lib = "SL.glm",
+  V = 2,
+  seed = 1
+)
+
+fit_psi2$result
+```
+
+## Customizing SuperLearner
+
+You can specify different libraries for different nuisance functions:
+
+```{r, eval = FALSE}
+fit_custom <- mar_bounds(
+  dat,
+  Y = "Y",
+  A = "A",
+  C = "C",
+  X = "X",
+  estimand = "ate",
+  assumption = "general",
+  sl_lib_prop = c("SL.glm", "SL.mean"),      # Propensity score
+  sl_lib_miss = c("SL.glm", "SL.gam"),       # Missingness probabilities
+  sl_lib_outcome = c("SL.glm", "SL.ranger"), # Outcome regression
+  V = 2,
+  seed = 1
+)
+```
+
+## Next Steps
+
+- See `vignette("sensitivity-analysis")` for sensitivity analysis across parameter grids
+- See `vignette("advanced")` for advanced options and technical details
+- See the package documentation for details on each assumption type
+
+## References
+
+Rubinstein, M., Agniel, D., Han, L., Horvitz-Lennon, M., & Normand, S.-L. (2024).
+Bounding causal effects with an unknown mixture of informative and non-informative missingness.
+Journal of Causal Inference (Accepted). https://arxiv.org/pdf/2411.16902

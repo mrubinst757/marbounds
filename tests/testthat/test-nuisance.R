@@ -21,10 +21,10 @@ test_that("estimate_nuisance returns list with e, pi0, pi1, mu0, mu1, fold_id", 
 test_that("estimate_nuisance runs with default libraries", {
   skip_if_not_installed("SuperLearner")
   suppressPackageStartupMessages(library(SuperLearner))
-  dat <- make_tiny_data(n = 40)
+  dat <- make_tiny_data(n = 100)
   nuis <- estimate_nuisance(
     X = as.matrix(dat$X), A = dat$A, C = dat$C, Y = dat$Y,
     V = 2, seed = 1
   )
-  expect_length(nuis$e, 40)
+  expect_length(nuis$e, 100)
 })
