@@ -13,6 +13,8 @@ estimate_nuisance(
   sl_lib_prop = "SL.glm",
   sl_lib_miss = "SL.glm",
   sl_lib_outcome = "SL.glm",
+  stratify_mu = TRUE,
+  family_Y = "gaussian",
   seed = NULL
 )
 }
@@ -33,6 +35,10 @@ estimate_nuisance(
 \item{sl_lib_miss}{Character vector of SuperLearner library for missingness pi_0, pi_1 (default "SL.glm").}
 
 \item{sl_lib_outcome}{Character vector of SuperLearner library for outcome mu_0, mu_1 (default "SL.glm").}
+
+\item{stratify_mu}{Logical; if TRUE (default), estimate separate outcome models mu_0 and mu_1 stratified by treatment A. If FALSE, estimate a single pooled model E(Y|X,C=0) and predict for both A=0 and A=1.}
+
+\item{family_Y}{Character; family for outcome model ("gaussian" or "binomial"). Default "gaussian".}
 
 \item{seed}{Optional seed for fold splits.}
 }

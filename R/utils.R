@@ -31,9 +31,14 @@ clip_probs <- function(p, eps = 1e-6) {
 }
 
 #' Expit (inverse logit)
+#' @param x Numeric vector
+#' @keywords internal
 expit <- function(x) {
   1 / (1 + exp(-x))
 }
 
 #' Default value when argument is NULL
+#' @param x First argument
+#' @param y Default value to use if x is NULL
+#' @noRd
 `%||%` <- function(x, y) if (is.null(x)) y else x

@@ -1,0 +1,9 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+^\.git$
+^\.github$
+^\.claude$
+^check_output\.txt$
+^max-tests\.R$
+^quality_reports$
+^vignettes/.*\.R$

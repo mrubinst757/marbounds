@@ -8,8 +8,8 @@ compute_bounds(
   phi,
   estimand = c("ate", "psi1", "psi2"),
   assumption = c("general", "bounded_delta", "monotonicity_pos", "monotonicity_neg",
-    "bounded_risk", "bounded_risk_unbounded_tau", "bounded_risk_bounded_delta",
-    "point_ate", "point_psi1", "point_psi2"),
+    "bounded_risk", "bounded_risk_unbounded_tau", "point_ate", "point_psi1",
+    "point_psi2"),
   delta_0u = 1,
   delta_1u = 1,
   delta_0l = 0,
@@ -19,8 +19,12 @@ compute_bounds(
   tau_0 = NULL,
   tau_1 = NULL,
   tau = NULL,
+  mu0 = NULL,
+  mu1 = NULL,
   pi0 = NULL,
-  mu1 = NULL
+  pi1 = NULL,
+  smooth_approximation = FALSE,
+  epsilon = 0.001
 )
 }
 \arguments{
@@ -36,9 +40,17 @@ compute_bounds(
 
 \item{delta_0, delta_1}{Point values (for point identification).}
 
-\item{tau_0, tau_1}{Bounded risk ratio params (for bounded_risk); single tau for point_ate.}
+\item{tau_0, tau_1}{Bounded risk ratio params (for bounded_risk).}
 
-\item{pi0, mu1}{For point_psi2 we need phi_3_01 = phi_1_1*pi0 + phi_2_0*mu1 - mu1*pi0 (n-vectors from nuisance).}
+\item{tau}{Single sensitivity parameter for point_ate (risk ratio in both arms).}
+
+\item{mu0, mu1}{Outcome nuisance functions (n-vectors).}
+
+\item{pi0, pi1}{Missingness probability nuisance functions (n-vectors).}
+
+\item{smooth_approximation}{Logical; for psi2 bounded_delta, use smooth approximation (TRUE) or indicator method (FALSE).}
+
+\item{epsilon}{Smoothing parameter for psi2 smooth approximation.}
 }
 \value{
 List with elements estimate, lower, upper (as appropriate), and optional se_* for asymptotic SEs.

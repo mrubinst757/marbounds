@@ -12,8 +12,8 @@ mar_bounds(
   X,
   estimand = c("ate", "psi1", "psi2"),
   assumption = c("general", "bounded_delta", "monotonicity_pos", "monotonicity_neg",
-    "bounded_risk", "bounded_risk_unbounded_tau", "bounded_risk_bounded_delta",
-    "point_ate", "point_psi1", "point_psi2"),
+    "bounded_risk", "bounded_risk_unbounded_tau", "point_ate", "point_psi1",
+    "point_psi2"),
   delta_0u = 1,
   delta_1u = 1,
   delta_0l = 0,
@@ -28,6 +28,10 @@ mar_bounds(
   sl_lib_prop = NULL,
   sl_lib_miss = NULL,
   sl_lib_outcome = NULL,
+  stratify_mu = TRUE,
+  family_Y = NULL,
+  smooth_approximation = FALSE,
+  epsilon = 0.001,
   seed = NULL,
   param_grid = NULL,
   grid_bounds = c("both", "lower", "upper"),
@@ -49,7 +53,7 @@ mar_bounds(
 
 \item{estimand}{One of "ate" (average treatment effect), "psi1" (composite ATE), "psi2" (separable direct effect).}
 
-\item{assumption}{One of "general", "bounded_delta", "monotonicity_pos", "monotonicity_neg", "bounded_risk", "bounded_risk_unbounded_tau", "bounded_risk_bounded_delta", "point_ate", "point_psi1", "point_psi2".
+\item{assumption}{One of "general", "bounded_delta", "monotonicity_pos", "monotonicity_neg", "bounded_risk", "bounded_risk_unbounded_tau", "point_ate", "point_psi1", "point_psi2".
 \describe{
   \item{general}{No extra assumptions; widest bounds (ATE/Psi_1).}
   \item{bounded_delta}{Proportion of informative missingness bounded by delta_0u, delta_1u (and delta_0l, delta_1l for Psi_1).}
@@ -57,7 +61,6 @@ mar_bounds(
   \item{monotonicity_neg}{Informative missingness decreases outcome risk.}
   \item{bounded_risk}{Outcome risk ratio in informatively missing bounded by tau_0, tau_1, with an upper bound that uses the minimum of 1-mu and mu*(tau-1) (as in the paper).}
   \item{bounded_risk_unbounded_tau}{Original bounded-risk formula without applying the minimum-based tau constraint (provides backward-compatible behavior).}
-  \item{bounded_risk_bounded_delta}{Narrower bounds under a bounded-delta assumption (as in \code{bounded_delta}), but also accepts a \code{tau} parameter.}
   \item{point_ate}{Point identification under known tau and delta_0, delta_1 (Assumption known-risk + known-missingness).}
   \item{point_psi1}{Point identification of Psi_1 under known delta_0, delta_1.}
   \item{point_psi2}{Point identification of Psi_2 under known delta_0.}
@@ -82,6 +85,14 @@ by default (propensity, missingness, outcome); defaults to \code{"SL.glm"}.}
 \item{sl_lib_prop, sl_lib_miss, sl_lib_outcome}{Optional SuperLearner libraries for
 propensity, missingness, and outcome models. If \code{NULL}, they fall back to
 \code{sl_lib}.}
+
+\item{stratify_mu}{Logical; if TRUE (default), estimate separate outcome models for A=0 and A=1. If FALSE, estimate a single pooled model E(Y|X,C=0).}
+
+\item{family_Y}{Character; family for outcome model ("gaussian" or "binomial"). If NULL (default), automatically detects: "binomial" for binary Y (only 0/1 values), otherwise "gaussian". Set explicitly to override auto-detection.}
+
+\item{smooth_approximation}{Logical; for Psi_2 bounds under bounded_delta, use smooth approximation (TRUE) or indicator function method (FALSE, default).}
+
+\item{epsilon}{Smoothing parameter for Psi_2 smooth approximation (default 0.001). Only used when smooth_approximation = TRUE.}
 
 \item{seed}{Optional seed for cross-fitting splits.}
 
@@ -108,12 +119,9 @@ confidence intervals over the grid (default 0.05).}
 (default) or \code{"gaussian"}.}
 }
 \value{
-A list with components: \code{naive} (naive estimate assuming MAR), \code{lower}, \code{upper} (for bounds), or \code{estimate} (for point ID), with \code{se_*} or \code{se} and optional \code{nuisance}, \code{phi} for downstream use. When
-  \code{param_grid} is provided (for ATE, Psi_1, or Psi_2 as applicable), the list
-  additionally contains \code{lower_grid} and/or \code{upper_grid} (for bounds) and/or
-  \code{estimate_grid} (for point-identified grids), each a list with a \code{grid}
-  data.frame of parameter values, point estimates, pointwise and uniform SEs and CIs,
-  and the multiplier critical value.
+A list with components: \code{naive} (naive estimate assuming MAR), \code{lower}, \code{upper} (for bounds), or \code{estimate} (for point ID), with \code{se_*} or \code{se} and optional \code{nuisance}, \code{phi} for downstream use.
+  \code{result} contains a convenient dataframe summary: for scalar results, it includes the estimates and confidence intervals; for grid results (\code{param_grid} provided), it contains the combined grid output in long format with \code{bound_type} column for bounds.
+  When \code{param_grid} is provided, the list also contains \code{lower_grid}, \code{upper_grid}, and/or \code{estimate_grid} as separate list objects with pointwise and uniform inference.
 }
 \description{
 Implements the methods from the paper: bounds on ATE, composite ATE (Psi_1), and

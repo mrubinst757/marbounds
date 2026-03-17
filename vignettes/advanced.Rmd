@@ -1,0 +1,470 @@
+---
+title: "Advanced Usage and Technical Details"
+author: "Max Rubinstein, Denis Agniel, Larry Han, Marcela Horvitz-Lennon, Sharon-Lise Normand"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Advanced Usage and Technical Details}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+## Overview
+
+This vignette covers advanced usage of **marbounds**, including:
+- Custom SuperLearner configurations
+- Understanding nuisance parameter estimation
+- Working with influence functions
+- Technical options and performance tuning
+
+```{r}
+library(marbounds)
+suppressPackageStartupMessages(library(SuperLearner))
+```
+
+## SuperLearner Configuration
+
+### Available Libraries
+
+SuperLearner offers many prediction algorithms. Common choices:
+
+```{r, eval = FALSE}
+# See all available algorithms
+listWrappers()
+```
+
+**Regression algorithms:**
+- `SL.glm` - Logistic/linear regression (fast, parametric)
+- `SL.gam` - Generalized additive models (flexible, smooth)
+- `SL.ranger` - Random forests (flexible, nonparametric)
+- `SL.xgboost` - Gradient boosting (powerful, tunable)
+- `SL.earth` - MARS (multivariate adaptive regression splines)
+- `SL.glmnet` - Elastic net (regularized regression)
+
+**Screening algorithms:**
+- `screen.corP` - Select by correlation p-value
+- `screen.glmnet` - LASSO screening
+
+### Custom Library Specifications
+
+You can create ensembles by providing vectors of algorithms:
+
+```{r}
+# Example data
+set.seed(20260313)
+n <- 500
+X <- runif(n, -2, 2)
+A <- rbinom(n, 1, plogis(X))
+C <- rbinom(n, 1, 0.2 + 0.1 * A)
+Y <- ifelse(C == 1, NA, rbinom(n, 1, plogis(0.5 * A + 0.3 * X)))
+dat <- data.frame(Y = Y, A = A, C = C, X = X)
+
+# Simple ensemble
+fit_ensemble <- mar_bounds(
+  dat,
+  Y = "Y",
+  A = "A",
+  C = "C",
+  X = "X",
+  estimand = "ate",
+  assumption = "general",
+  sl_lib = c("SL.glm", "SL.gam", "SL.mean"),
+  V = 2,
+  seed = 1
+)
+
+# Check SuperLearner weights (stored in nuisance object)
+fit_ensemble$nuisance$SL_weights_prop  # Propensity score weights
+```
+
+### Separate Libraries for Each Nuisance Function
+
+For maximum flexibility, specify different libraries:
+
+```{r, eval = FALSE}
+fit_custom <- mar_bounds(
+  dat,
+  Y = "Y",
+  A = "A",
+  C = "C",
+  X = "X",
+  estimand = "ate",
+  assumption = "general",
+  sl_lib_prop = c("SL.glm", "SL.gam"),           # Propensity score
+  sl_lib_miss = c("SL.glm", "SL.ranger"),        # Missingness mechanism
+  sl_lib_outcome = c("SL.glm", "SL.xgboost"),    # Outcome regression
+  V = 5,  # More folds for stable SuperLearner
+  seed = 1
+)
+```
+
+### When to Use Different Libraries
+
+**Simple parametric (`SL.glm` only):**
+- Small samples (n < 500)
+- When you want fast computation
+- When relationships are approximately linear
+- For debugging/prototyping
+
+**Flexible ensembles:**
+- Larger samples (n > 1000)
+- Unknown functional forms
+- Complex covariate relationships
+- Final analyses
+
+## Cross-Fitting and Sample Splitting
+
+### Understanding V-Fold Cross-Fitting
+
+The package uses cross-fitting to estimate nuisance functions. Parameter `V` controls the number of folds:
+
+```{r}
+# V = 2 (default): Split data in half
+fit_v2 <- mar_bounds(
+  dat, Y = "Y", A = "A", C = "C", X = "X",
+  estimand = "ate", assumption = "general",
+  V = 2, sl_lib = "SL.glm", seed = 1
+)
+
+# V = 5: More folds (better for larger samples)
+fit_v5 <- mar_bounds(
+  dat, Y = "Y", A = "A", C = "C", X = "X",
+  estimand = "ate", assumption = "general",
+  V = 5, sl_lib = "SL.glm", seed = 1
+)
+
+# V = 1: No cross-fitting (not recommended for inference)
+fit_v1 <- mar_bounds(
+  dat, Y = "Y", A = "A", C = "C", X = "X",
+  estimand = "ate", assumption = "general",
+  V = 1, sl_lib = "SL.glm", seed = 1
+)
+```
+
+**Guidelines:**
+- V = 2 is sufficient for most applications
+- V = 5-10 for very large samples or complex SuperLearner libraries
+- V = 1 only when using simple parametric models (SL.glm only)
+
+### Accessing Fold Information
+
+```{r}
+# Check fold assignments
+table(fit_v2$nuisance$fold_id)
+
+# Nuisance estimates are out-of-sample within each fold
+head(fit_v2$nuisance$fold_id)
+```
+
+## Working with Influence Functions
+
+### Extracting Influence Functions
+
+The influence function matrix φ contains information used for inference:
+
+```{r}
+phi <- fit_v2$phi
+dim(phi)  # n x 6 matrix
+colnames(phi)
+```
+
+The 6 columns correspond to:
+1. `phi_psi_naive`: Naive estimator (complete-case)
+2-3. Columns for lower bound computation
+4-5. Columns for upper bound computation
+6. Additional component
+
+### Custom Inference
+
+You can use the influence functions for custom inference:
+
+```{r}
+# Standard error calculation
+se_custom <- function(phi_col) {
+  sqrt(var(phi_col) / length(phi_col))
+}
+
+# Custom confidence interval
+estimate <- fit_v2$lower
+se <- se_custom(phi[, 2] + phi[, 3])  # Combine relevant components
+ci_lower <- estimate - 1.96 * se
+ci_upper <- estimate + 1.96 * se
+
+cat("Custom 95% CI for lower bound: [", ci_lower, ",", ci_upper, "]\n")
+```
+
+### Bootstrap with Custom Parameters
+
+Use influence functions to compute bounds at new parameter values without re-estimating nuisances:
+
+```{r, eval = FALSE}
+# Extract fitted object components
+phi <- fit_v2$phi
+nuisance <- fit_v2$nuisance
+
+# Compute bounds at different δ values using stored influence functions
+# (This is what multiplier_bootstrap_grid does internally)
+new_bounds <- marbounds:::compute_bounds(
+  phi,
+  estimand = "ate",
+  assumption = "general",
+  delta_0 = 0.6,
+  delta_1 = 0.6
+)
+```
+
+## Outcome Model Stratification
+
+### Stratified vs. Pooled Outcome Models
+
+By default, outcome models are fit separately within treatment arms:
+
+```{r}
+# Stratified (default): E[Y|A=a,X] fit separately for a=0 and a=1
+fit_stratified <- mar_bounds(
+  dat, Y = "Y", A = "A", C = "C", X = "X",
+  estimand = "ate", assumption = "general",
+  stratify_mu = TRUE,
+  V = 2, sl_lib = "SL.glm", seed = 1
+)
+
+# Pooled: E[Y|A,X] fit once with A as covariate
+fit_pooled <- mar_bounds(
+  dat, Y = "Y", A = "A", C = "C", X = "X",
+  estimand = "ate", assumption = "general",
+  stratify_mu = FALSE,
+  V = 2, sl_lib = "SL.glm", seed = 1
+)
+```
+
+**When to use pooled:**
+- Small observed samples within treatment arms
+- Believe treatment effect is approximately constant
+- Want to borrow strength across treatment groups
+
+## Assumption Types in Detail
+
+### General Bounds
+
+No assumptions beyond conditional independence of missingness given (A, X):
+
+```{r}
+fit_general <- mar_bounds(
+  dat, Y = "Y", A = "A", C = "C", X = "X",
+  estimand = "ate",
+  assumption = "general",
+  V = 2, sl_lib = "SL.glm", seed = 1
+)
+```
+
+### Bounded Delta (Informative Proportion)
+
+At most δ proportion of missingness is informative:
+
+```{r}
+fit_bounded_delta <- mar_bounds(
+  dat, Y = "Y", A = "A", C = "C", X = "X",
+  estimand = "psi1",
+  assumption = "bounded_delta",
+  delta_0u = 0.8,  # Upper bound on proportion
+  delta_1u = 0.8,
+  V = 2, sl_lib = "SL.glm", seed = 1
+)
+```
+
+### Monotonicity
+
+Missingness is more likely for one outcome value:
+
+```{r}
+# Positive monotonicity: P(C=1|Y=1,A,X) >= P(C=1|Y=0,A,X)
+fit_mono_pos <- mar_bounds(
+  dat, Y = "Y", A = "A", C = "C", X = "X",
+  estimand = "ate",
+  assumption = "monotonicity_pos",
+  delta_0u = 0.8,
+  delta_1u = 0.8,
+  V = 2, sl_lib = "SL.glm", seed = 1
+)
+
+# Negative monotonicity: reverse inequality
+fit_mono_neg <- mar_bounds(
+  dat, Y = "Y", A = "A", C = "C", X = "X",
+  estimand = "ate",
+  assumption = "monotonicity_neg",
+  delta_0u = 0.8,
+  delta_1u = 0.8,
+  V = 2, sl_lib = "SL.glm", seed = 1
+)
+```
+
+### Bounded Risk
+
+Bounds on the ratio of missing-to-observed outcome risks:
+
+```{r}
+fit_bounded_risk <- mar_bounds(
+  dat, Y = "Y", A = "A", C = "C", X = "X",
+  estimand = "ate",
+  assumption = "bounded_risk",
+  delta_0u = 0.8,
+  delta_1u = 0.8,
+  tau_0 = 2,  # Risk ratio bound in control
+  tau_1 = 2,  # Risk ratio bound in treatment
+  V = 2, sl_lib = "SL.glm", seed = 1
+)
+```
+
+### Point Identification
+
+When sensitivity parameters are known:
+
+```{r}
+fit_point <- mar_bounds(
+  dat, Y = "Y", A = "A", C = "C", X = "X",
+  estimand = "ate",
+  assumption = "point_ate",
+  delta_0 = 0.5,  # Known value
+  delta_1 = 0.5,
+  tau = 2,
+  V = 2, sl_lib = "SL.glm", seed = 1
+)
+```
+
+## Multiplier Bootstrap Options
+
+### Multiplier Types
+
+Two types of multipliers are available:
+
+```{r, eval = FALSE}
+# Rademacher (default): Random ±1
+fit_rademacher <- mar_bounds(
+  dat, Y = "Y", A = "A", C = "C", X = "X",
+  param_grid = list(delta_0 = c(0.5, 0.7, 0.9),
+                    delta_1 = c(0.5, 0.7, 0.9)),
+  multiplier = "rademacher",
+  B = 500, seed = 1
+)
+
+# Gaussian: Random N(0,1)
+fit_gaussian <- mar_bounds(
+  dat, Y = "Y", A = "A", C = "C", X = "X",
+  param_grid = list(delta_0 = c(0.5, 0.7, 0.9),
+                    delta_1 = c(0.5, 0.7, 0.9)),
+  multiplier = "gaussian",
+  B = 500, seed = 1
+)
+```
+
+Both are valid; results should be similar. Rademacher is slightly faster.
+
+### Number of Bootstrap Replicates
+
+```{r, eval = FALSE}
+# Quick exploration
+fit_quick <- mar_bounds(..., B = 100)
+
+# Standard analysis
+fit_standard <- mar_bounds(..., B = 500)
+
+# Publication-quality
+fit_publication <- mar_bounds(..., B = 1000)
+```
+
+## Performance Optimization
+
+### Small Samples (n < 200)
+
+```{r, eval = FALSE}
+fit_small <- mar_bounds(
+  dat,
+  Y = "Y", A = "A", C = "C", X = "X",
+  sl_lib = "SL.glm",  # Parametric only
+  V = 2,              # Minimal cross-fitting
+  B = 200,            # Fewer bootstrap replicates
+  seed = 1
+)
+```
+
+### Large Samples (n > 5000)
+
+```{r, eval = FALSE}
+fit_large <- mar_bounds(
+  dat,
+  Y = "Y", A = "A", C = "C", X = "X",
+  sl_lib = c("SL.glm", "SL.gam", "SL.ranger"),  # Can use complex models
+  V = 5,              # More folds for stability
+  B = 1000,           # More bootstrap replicates
+  seed = 1
+)
+```
+
+### Parameter Grid Size
+
+For very large grids, consider computing only necessary bounds:
+
+```{r, eval = FALSE}
+# Only compute one bound
+fit_lower <- mar_bounds(..., grid_bounds = "lower")
+fit_upper <- mar_bounds(..., grid_bounds = "upper")
+
+# Or split into smaller grids
+grid1 <- list(delta_0 = seq(0.3, 0.6, 0.1), delta_1 = seq(0.3, 0.6, 0.1))
+grid2 <- list(delta_0 = seq(0.7, 1.0, 0.1), delta_1 = seq(0.7, 1.0, 0.1))
+```
+
+## Troubleshooting
+
+### SuperLearner Convergence Issues
+
+If you see "All algorithms dropped from library":
+
+```{r, eval = FALSE}
+# Solution 1: Use simpler library
+mar_bounds(..., sl_lib = "SL.glm")
+
+# Solution 2: Increase V to avoid small training samples
+mar_bounds(..., V = 2)  # instead of V = 5
+
+# Solution 3: Add fallback algorithms
+mar_bounds(..., sl_lib = c("SL.glm", "SL.mean"))
+```
+
+### Missing Value Warnings
+
+The package expects missingness to be coded with `NA` in the outcome and `C = 1`:
+
+```{r, eval = FALSE}
+# Correct coding
+dat$Y[dat$C == 1] <- NA
+
+# Check consistency
+stopifnot(all(is.na(dat$Y) == (dat$C == 1)))
+```
+
+### Reproducibility
+
+Always set a seed for reproducible results:
+
+```{r, eval = FALSE}
+fit <- mar_bounds(..., seed = 20260313)  # YYYYMMDD format recommended
+```
+
+## References
+
+Rubinstein, M., Agniel, D., Han, L., Horvitz-Lennon, M., & Normand, S.-L. (2026).
+Bounding causal effects with an unknown mixture of informative and non-informative missingness.
+Journal of Causal Inference (Accepted). https://arxiv.org/pdf/2411.16902
+
+van der Laan, M. J., Polley, E. C., & Hubbard, A. E. (2007).
+Super learner. Statistical Applications in Genetics and Molecular Biology, 6(1).

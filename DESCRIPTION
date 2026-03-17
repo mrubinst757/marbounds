@@ -1,14 +1,17 @@
 Package: marbounds
 Title: Bounds on Causal Effects with Mixed Informative and Non-Informative Missingness
 Version: 0.1.0
-Authors@R: person("Author", "Name", email = "author@example.com", role = c("aut", "cre"))
+Authors@R: c(
+    person("Max", "Rubinstein", email = "mrubinstein@rand.org", role = c("aut", "cre")),
+    person("Denis", "Agniel", email = "dagniel@rand.org", role = "aut")
+  )
 Description: Implements influence-function-based estimators for bounds on causal effects
   (ATE, composite ATE, separable direct effect) when outcomes are missing due to an
   unknown mixture of informative and non-informative missingness. Supports
   user-specified estimands, assumptions, sensitivity parameters, tipping point
   analysis, and multiplier bootstrap over a grid of parameters. Nuisance functions
   are estimated via SuperLearner with cross-fitting.
-License: MIT
+License: MIT + file LICENSE
 Encoding: UTF-8
 Imports:
   SuperLearner,
@@ -16,5 +19,7 @@ Imports:
 Suggests:
   testthat,
   knitr,
-  rmarkdown
-RoxygenNote: 7.2.3
+  rmarkdown,
+  ggplot2
+VignetteBuilder: knitr
+RoxygenNote: 7.3.3
