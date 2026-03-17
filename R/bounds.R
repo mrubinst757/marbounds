@@ -87,8 +87,8 @@ coef_point_psi1 <- function(delta_0, delta_1) {
 #' @param tau Single sensitivity parameter for point_ate (risk ratio in both arms).
 #' @param mu0,mu1 Outcome nuisance functions (n-vectors).
 #' @param pi0,pi1 Missingness probability nuisance functions (n-vectors).
-#' @param smooth_approximation Logical; for psi2 bounded_delta, use smooth approximation (TRUE) or indicator method (FALSE).
-#' @param epsilon Smoothing parameter for psi2 smooth approximation.
+#' @param smooth_approximation Logical; for psi2 bounded_delta and bounded_risk, use smooth approximation (TRUE) or indicator method (FALSE).
+#' @param epsilon Smoothing parameter for smooth approximation (default 0.001).
 #' @return List with elements estimate, lower, upper (as appropriate), and optional se_* for asymptotic SEs.
 compute_bounds <- function(phi,
                           estimand = c("ate", "psi1", "psi2"),
@@ -160,7 +160,7 @@ compute_bounds <- function(phi,
       if (is.null(mu0) || is.null(mu1) || is.null(pi0) || is.null(pi1)) {
         stop("For bounded_risk provide mu0, mu1, pi0, and pi1.")
       }
-      # Upper bound: uses min{1-mu, mu*(tau-1)} via indicator
+
       phi1_0 <- phi[, 1]
       phi1_1 <- phi[, 2]
       phi2_0 <- phi[, 3]
@@ -168,22 +168,70 @@ compute_bounds <- function(phi,
       phi3_0 <- phi[, 5]
       phi3_1 <- phi[, 6]
 
-      mask1 <- (tau_1 * mu1 > 1)
-      mask0 <- (tau_0 * mu0 > 1)
+      if (smooth_approximation) {
+        # Smooth approximation using Φ_ε
+        # Φ_ε(x) = Φ(x/ε) where Φ is standard normal CDF
+        phi_eps_tau1_mu1 <- stats::pnorm((tau_1 * mu1 - 1) / epsilon)  # Φ_ε(τ_1*μ_1 - 1)
+        phi_eps_tau0_mu0 <- stats::pnorm((tau_0 * mu0 - 1) / epsilon)  # Φ_ε(τ_0*μ_0 - 1)
+        phi_eps_1_tau1_mu1 <- stats::pnorm((1 - tau_1 * mu1) / epsilon)  # Φ_ε(1 - τ_1*μ_1)
+        phi_eps_1_tau0_mu0 <- stats::pnorm((1 - tau_0 * mu0) / epsilon)  # Φ_ε(1 - τ_0*μ_0)
 
-      ub_vec <- (phi1_1 - phi1_0) +
-        delta_1u * ( (phi2_1 - phi3_1) * mask1 + (tau_1 - 1) * phi3_1 * (!mask1) ) -
-        delta_0u * ( (tau_0^{-1} - 1) * phi3_0 )
+        # φ_ε(x) = (1/ε)φ(x/ε) where φ is standard normal PDF
+        phi_density_tau1_mu1 <- stats::dnorm((tau_1 * mu1 - 1) / epsilon) / epsilon
+        phi_density_1_tau1_mu1 <- stats::dnorm((1 - tau_1 * mu1) / epsilon) / epsilon
+        phi_density_tau0_mu0 <- stats::dnorm((tau_0 * mu0 - 1) / epsilon) / epsilon
+        phi_density_1_tau0_mu0 <- stats::dnorm((1 - tau_0 * mu0) / epsilon) / epsilon
 
-      lb_vec <- (phi1_1 - phi1_0) +
-        delta_1u * ( (tau_1^{-1} - 1) * phi3_1 ) -
-        delta_0u * ( (phi2_0 - phi3_0) * mask0 + (tau_0 - 1) * phi3_0 * (!mask0) )
+        # Upper bound: uses min{1-mu_1, mu_1*(tau_1-1)} for a=1
+        # Base smooth formula
+        ub_vec <- (phi1_1 - phi1_0) +
+          delta_1u * ((phi2_1 - phi3_1) * phi_eps_tau1_mu1 + (tau_1 - 1) * phi3_1 * (1 - phi_eps_tau1_mu1)) -
+          delta_0u * ((tau_0^{-1} - 1) * phi3_0)
 
-      lower <- mean(lb_vec)
-      upper <- mean(ub_vec)
-      se_lower <- sqrt(stats::var(lb_vec) / n)
-      se_upper <- sqrt(stats::var(ub_vec) / n)
-      return(list(naive = th[2] - th[1], lower = lower, upper = upper, se_lower = se_lower, se_upper = se_upper))
+        # Additional correction term for a=1
+        correction_upper <- delta_1u * tau_1 * phi1_1 * (
+          pi1 * (1 - mu1) * phi_density_tau1_mu1 +
+          (tau_1 - 1) * pi1 * mu1 * phi_density_1_tau1_mu1
+        )
+        ub_vec <- ub_vec + correction_upper
+
+        # Lower bound: uses min{1-mu_0, mu_0*(tau_0-1)} for a=0
+        # Base smooth formula
+        lb_vec <- (phi1_1 - phi1_0) +
+          delta_1u * ((tau_1^{-1} - 1) * phi3_1) -
+          delta_0u * ((phi2_0 - phi3_0) * phi_eps_tau0_mu0 + (tau_0 - 1) * phi3_0 * (1 - phi_eps_tau0_mu0))
+
+        # Additional correction term for a=0
+        correction_lower <- delta_0u * tau_0 * phi1_0 * (
+          pi0 * (1 - mu0) * phi_density_tau0_mu0 +
+          (tau_0 - 1) * pi0 * mu0 * phi_density_1_tau0_mu0
+        )
+        lb_vec <- lb_vec - correction_lower  # Note: subtract for lower bound
+
+        lower <- mean(lb_vec)
+        upper <- mean(ub_vec)
+        se_lower <- sqrt(stats::var(lb_vec) / n)
+        se_upper <- sqrt(stats::var(ub_vec) / n)
+        return(list(naive = th[2] - th[1], lower = lower, upper = upper, se_lower = se_lower, se_upper = se_upper))
+      } else {
+        # Indicator function method (default)
+        mask1 <- (tau_1 * mu1 > 1)
+        mask0 <- (tau_0 * mu0 > 1)
+
+        ub_vec <- (phi1_1 - phi1_0) +
+          delta_1u * ( (phi2_1 - phi3_1) * mask1 + (tau_1 - 1) * phi3_1 * (!mask1) ) -
+          delta_0u * ( (tau_0^{-1} - 1) * phi3_0 )
+
+        lb_vec <- (phi1_1 - phi1_0) +
+          delta_1u * ( (tau_1^{-1} - 1) * phi3_1 ) -
+          delta_0u * ( (phi2_0 - phi3_0) * mask0 + (tau_0 - 1) * phi3_0 * (!mask0) )
+
+        lower <- mean(lb_vec)
+        upper <- mean(ub_vec)
+        se_lower <- sqrt(stats::var(lb_vec) / n)
+        se_upper <- sqrt(stats::var(ub_vec) / n)
+        return(list(naive = th[2] - th[1], lower = lower, upper = upper, se_lower = se_lower, se_upper = se_upper))
+      }
     }
     if (assumption == "point_ate") {
       b <- coef_point_ate(delta_0, delta_1, tau)
