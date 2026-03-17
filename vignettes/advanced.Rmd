@@ -82,8 +82,8 @@ fit_ensemble <- mar_bounds(
   seed = 1
 )
 
-# Check SuperLearner weights (stored in nuisance object)
-fit_ensemble$nuisance$SL_weights_prop  # Propensity score weights
+# SuperLearner automatically selects weights
+# (Weights not directly accessible in output)
 ```
 
 ### Separate Libraries for Each Nuisance Function
@@ -194,8 +194,8 @@ se_custom <- function(phi_col) {
 }
 
 # Custom confidence interval
-estimate <- fit_v2$lower
-se <- se_custom(phi[, 2] + phi[, 3])  # Combine relevant components
+estimate <- fit_v2$result$lower
+se <- fit_v2$result$se_lower
 ci_lower <- estimate - 1.96 * se
 ci_upper <- estimate + 1.96 * se
 
@@ -211,14 +211,13 @@ Use influence functions to compute bounds at new parameter values without re-est
 phi <- fit_v2$phi
 nuisance <- fit_v2$nuisance
 
-# Compute bounds at different δ values using stored influence functions
-# (This is what multiplier_bootstrap_grid does internally)
-new_bounds <- marbounds:::compute_bounds(
-  phi,
-  estimand = "ate",
-  assumption = "general",
-  delta_0 = 0.6,
-  delta_1 = 0.6
+# Use multiplier_bootstrap_grid for custom parameter values
+new_bounds <- multiplier_bootstrap_grid(
+  fit_v2,
+  param_grid = data.frame(delta_0u = 0.6, delta_1u = 0.6),
+  bound_spec = "lower",
+  assumption = "bounded_delta",
+  B = 100
 )
 ```
 

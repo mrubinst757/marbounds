@@ -12,14 +12,14 @@ library(marbounds)
 suppressPackageStartupMessages(library(SuperLearner))
 
 
-## ----eval = FALSE-------------------------------------------------------------
-# # See all available algorithms
-# listWrappers()
+## ---- eval = FALSE------------------------------------------------------------
+## # See all available algorithms
+## listWrappers()
 
 
 ## -----------------------------------------------------------------------------
 # Example data
-set.seed(20240313)
+set.seed(20260313)
 n <- 500
 X <- runif(n, -2, 2)
 A <- rbinom(n, 1, plogis(X))
@@ -45,21 +45,21 @@ fit_ensemble <- mar_bounds(
 fit_ensemble$nuisance$SL_weights_prop  # Propensity score weights
 
 
-## ----eval = FALSE-------------------------------------------------------------
-# fit_custom <- mar_bounds(
-#   dat,
-#   Y = "Y",
-#   A = "A",
-#   C = "C",
-#   X = "X",
-#   estimand = "ate",
-#   assumption = "general",
-#   sl_lib_prop = c("SL.glm", "SL.gam"),           # Propensity score
-#   sl_lib_miss = c("SL.glm", "SL.ranger"),        # Missingness mechanism
-#   sl_lib_outcome = c("SL.glm", "SL.xgboost"),    # Outcome regression
-#   V = 5,  # More folds for stable SuperLearner
-#   seed = 1
-# )
+## ---- eval = FALSE------------------------------------------------------------
+## fit_custom <- mar_bounds(
+##   dat,
+##   Y = "Y",
+##   A = "A",
+##   C = "C",
+##   X = "X",
+##   estimand = "ate",
+##   assumption = "general",
+##   sl_lib_prop = c("SL.glm", "SL.gam"),           # Propensity score
+##   sl_lib_miss = c("SL.glm", "SL.ranger"),        # Missingness mechanism
+##   sl_lib_outcome = c("SL.glm", "SL.xgboost"),    # Outcome regression
+##   V = 5,  # More folds for stable SuperLearner
+##   seed = 1
+## )
 
 
 ## -----------------------------------------------------------------------------
@@ -114,20 +114,20 @@ ci_upper <- estimate + 1.96 * se
 cat("Custom 95% CI for lower bound: [", ci_lower, ",", ci_upper, "]\n")
 
 
-## ----eval = FALSE-------------------------------------------------------------
-# # Extract fitted object components
-# phi <- fit_v2$phi
-# nuisance <- fit_v2$nuisance
-# 
-# # Compute bounds at different δ values using stored influence functions
-# # (This is what multiplier_bootstrap_grid does internally)
-# new_bounds <- marbounds:::compute_bounds(
-#   phi,
-#   estimand = "ate",
-#   assumption = "general",
-#   delta_0 = 0.6,
-#   delta_1 = 0.6
-# )
+## ---- eval = FALSE------------------------------------------------------------
+## # Extract fitted object components
+## phi <- fit_v2$phi
+## nuisance <- fit_v2$nuisance
+## 
+## # Compute bounds at different δ values using stored influence functions
+## # (This is what multiplier_bootstrap_grid does internally)
+## new_bounds <- marbounds:::compute_bounds(
+##   phi,
+##   estimand = "ate",
+##   assumption = "general",
+##   delta_0 = 0.6,
+##   delta_1 = 0.6
+## )
 
 
 ## -----------------------------------------------------------------------------
@@ -215,88 +215,88 @@ fit_point <- mar_bounds(
 )
 
 
-## ----eval = FALSE-------------------------------------------------------------
-# # Rademacher (default): Random ±1
-# fit_rademacher <- mar_bounds(
-#   dat, Y = "Y", A = "A", C = "C", X = "X",
-#   param_grid = list(delta_0 = c(0.5, 0.7, 0.9),
-#                     delta_1 = c(0.5, 0.7, 0.9)),
-#   multiplier = "rademacher",
-#   B = 500, seed = 1
-# )
-# 
-# # Gaussian: Random N(0,1)
-# fit_gaussian <- mar_bounds(
-#   dat, Y = "Y", A = "A", C = "C", X = "X",
-#   param_grid = list(delta_0 = c(0.5, 0.7, 0.9),
-#                     delta_1 = c(0.5, 0.7, 0.9)),
-#   multiplier = "gaussian",
-#   B = 500, seed = 1
-# )
+## ---- eval = FALSE------------------------------------------------------------
+## # Rademacher (default): Random ±1
+## fit_rademacher <- mar_bounds(
+##   dat, Y = "Y", A = "A", C = "C", X = "X",
+##   param_grid = list(delta_0 = c(0.5, 0.7, 0.9),
+##                     delta_1 = c(0.5, 0.7, 0.9)),
+##   multiplier = "rademacher",
+##   B = 500, seed = 1
+## )
+## 
+## # Gaussian: Random N(0,1)
+## fit_gaussian <- mar_bounds(
+##   dat, Y = "Y", A = "A", C = "C", X = "X",
+##   param_grid = list(delta_0 = c(0.5, 0.7, 0.9),
+##                     delta_1 = c(0.5, 0.7, 0.9)),
+##   multiplier = "gaussian",
+##   B = 500, seed = 1
+## )
 
 
-## ----eval = FALSE-------------------------------------------------------------
-# # Quick exploration
-# fit_quick <- mar_bounds(..., B = 100)
-# 
-# # Standard analysis
-# fit_standard <- mar_bounds(..., B = 500)
-# 
-# # Publication-quality
-# fit_publication <- mar_bounds(..., B = 1000)
+## ---- eval = FALSE------------------------------------------------------------
+## # Quick exploration
+## fit_quick <- mar_bounds(..., B = 100)
+## 
+## # Standard analysis
+## fit_standard <- mar_bounds(..., B = 500)
+## 
+## # Publication-quality
+## fit_publication <- mar_bounds(..., B = 1000)
 
 
-## ----eval = FALSE-------------------------------------------------------------
-# fit_small <- mar_bounds(
-#   dat,
-#   Y = "Y", A = "A", C = "C", X = "X",
-#   sl_lib = "SL.glm",  # Parametric only
-#   V = 2,              # Minimal cross-fitting
-#   B = 200,            # Fewer bootstrap replicates
-#   seed = 1
-# )
+## ---- eval = FALSE------------------------------------------------------------
+## fit_small <- mar_bounds(
+##   dat,
+##   Y = "Y", A = "A", C = "C", X = "X",
+##   sl_lib = "SL.glm",  # Parametric only
+##   V = 2,              # Minimal cross-fitting
+##   B = 200,            # Fewer bootstrap replicates
+##   seed = 1
+## )
 
 
-## ----eval = FALSE-------------------------------------------------------------
-# fit_large <- mar_bounds(
-#   dat,
-#   Y = "Y", A = "A", C = "C", X = "X",
-#   sl_lib = c("SL.glm", "SL.gam", "SL.ranger"),  # Can use complex models
-#   V = 5,              # More folds for stability
-#   B = 1000,           # More bootstrap replicates
-#   seed = 1
-# )
+## ---- eval = FALSE------------------------------------------------------------
+## fit_large <- mar_bounds(
+##   dat,
+##   Y = "Y", A = "A", C = "C", X = "X",
+##   sl_lib = c("SL.glm", "SL.gam", "SL.ranger"),  # Can use complex models
+##   V = 5,              # More folds for stability
+##   B = 1000,           # More bootstrap replicates
+##   seed = 1
+## )
 
 
-## ----eval = FALSE-------------------------------------------------------------
-# # Only compute one bound
-# fit_lower <- mar_bounds(..., grid_bounds = "lower")
-# fit_upper <- mar_bounds(..., grid_bounds = "upper")
-# 
-# # Or split into smaller grids
-# grid1 <- list(delta_0 = seq(0.3, 0.6, 0.1), delta_1 = seq(0.3, 0.6, 0.1))
-# grid2 <- list(delta_0 = seq(0.7, 1.0, 0.1), delta_1 = seq(0.7, 1.0, 0.1))
+## ---- eval = FALSE------------------------------------------------------------
+## # Only compute one bound
+## fit_lower <- mar_bounds(..., grid_bounds = "lower")
+## fit_upper <- mar_bounds(..., grid_bounds = "upper")
+## 
+## # Or split into smaller grids
+## grid1 <- list(delta_0 = seq(0.3, 0.6, 0.1), delta_1 = seq(0.3, 0.6, 0.1))
+## grid2 <- list(delta_0 = seq(0.7, 1.0, 0.1), delta_1 = seq(0.7, 1.0, 0.1))
 
 
-## ----eval = FALSE-------------------------------------------------------------
-# # Solution 1: Use simpler library
-# mar_bounds(..., sl_lib = "SL.glm")
-# 
-# # Solution 2: Increase V to avoid small training samples
-# mar_bounds(..., V = 2)  # instead of V = 5
-# 
-# # Solution 3: Add fallback algorithms
-# mar_bounds(..., sl_lib = c("SL.glm", "SL.mean"))
+## ---- eval = FALSE------------------------------------------------------------
+## # Solution 1: Use simpler library
+## mar_bounds(..., sl_lib = "SL.glm")
+## 
+## # Solution 2: Increase V to avoid small training samples
+## mar_bounds(..., V = 2)  # instead of V = 5
+## 
+## # Solution 3: Add fallback algorithms
+## mar_bounds(..., sl_lib = c("SL.glm", "SL.mean"))
 
 
-## ----eval = FALSE-------------------------------------------------------------
-# # Correct coding
-# dat$Y[dat$C == 1] <- NA
-# 
-# # Check consistency
-# stopifnot(all(is.na(dat$Y) == (dat$C == 1)))
+## ---- eval = FALSE------------------------------------------------------------
+## # Correct coding
+## dat$Y[dat$C == 1] <- NA
+## 
+## # Check consistency
+## stopifnot(all(is.na(dat$Y) == (dat$C == 1)))
 
 
-## ----eval = FALSE-------------------------------------------------------------
-# fit <- mar_bounds(..., seed = 20240313)  # YYYYMMDD format recommended
+## ---- eval = FALSE------------------------------------------------------------
+## fit <- mar_bounds(..., seed = 20260313)  # YYYYMMDD format recommended
 

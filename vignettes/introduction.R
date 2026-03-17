@@ -7,9 +7,9 @@ knitr::opts_chunk$set(
 )
 
 
-## ----eval = FALSE-------------------------------------------------------------
-# # Install from source
-# install.packages("path/to/marbounds", repos = NULL, type = "source")
+## ---- eval = FALSE------------------------------------------------------------
+## # Install from source
+## install.packages("path/to/marbounds", repos = NULL, type = "source")
 
 
 ## -----------------------------------------------------------------------------
@@ -18,7 +18,7 @@ suppressPackageStartupMessages(library(SuperLearner))
 
 
 ## -----------------------------------------------------------------------------
-set.seed(20240313)
+set.seed(20260313)
 n <- 500
 
 # Covariates
@@ -166,19 +166,19 @@ fit_psi2 <- mar_bounds(
 fit_psi2$result
 
 
-## ----eval = FALSE-------------------------------------------------------------
-# fit_custom <- mar_bounds(
-#   dat,
-#   Y = "Y",
-#   A = "A",
-#   C = "C",
-#   X = "X",
-#   estimand = "ate",
-#   assumption = "general",
-#   sl_lib_prop = c("SL.glm", "SL.mean"),      # Propensity score
-#   sl_lib_miss = c("SL.glm", "SL.gam"),       # Missingness probabilities
-#   sl_lib_outcome = c("SL.glm", "SL.ranger"), # Outcome regression
-#   V = 2,
-#   seed = 1
-# )
+## ---- eval = FALSE------------------------------------------------------------
+## fit_custom <- mar_bounds(
+##   dat,
+##   Y = "Y",
+##   A = "A",
+##   C = "C",
+##   X = "X",
+##   estimand = "ate",
+##   assumption = "general",
+##   sl_lib_prop = c("SL.glm", "SL.mean"),      # Propensity score
+##   sl_lib_miss = c("SL.glm", "SL.gam"),       # Missingness probabilities
+##   sl_lib_outcome = c("SL.glm", "SL.ranger"), # Outcome regression
+##   V = 2,
+##   seed = 1
+## )
 

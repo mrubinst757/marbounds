@@ -123,9 +123,9 @@ fit_bounded_delta <- mar_bounds(
   C = "C",
   X = "X",
   estimand = "ate",
-  assumption = "general",
-  delta_0 = 0.8,  # At most 80% informative in control group
-  delta_1 = 0.8,  # At most 80% informative in treatment group
+  assumption = "bounded_delta",
+  delta_0u = 0.8,  # At most 80% informative in control group
+  delta_1u = 0.8,  # At most 80% informative in treatment group
   sl_lib = "SL.glm",
   V = 2,
   seed = 1
@@ -170,9 +170,9 @@ The main output is a `result` data frame with:
 - `ci_lower`, `ci_upper`: Confidence interval
 
 **For bounds:**
-- `bound_type`: "lower" or "upper"
-- `estimate`: The bound estimate
-- `se`: Standard error
+- `naive`: Complete-case estimate
+- `lower`, `upper`: Lower and upper bound estimates
+- `se_lower`, `se_upper`: Standard errors for bounds
 - `ci_lower_lower`, `ci_lower_upper`: CI for lower bound
 - `ci_upper_lower`, `ci_upper_upper`: CI for upper bound
 
@@ -181,32 +181,30 @@ The main output is a `result` data frame with:
 Let's compare different assumptions:
 
 ```{r}
+# Add delta=0.5 bounds
+fit_delta_05 <- mar_bounds(
+  dat, Y = "Y", A = "A", C = "C", X = "X",
+  estimand = "ate", assumption = "bounded_delta",
+  delta_0u = 0.5, delta_1u = 0.5,
+  sl_lib = "SL.glm", V = 2, seed = 1
+)
+
 results <- data.frame(
   assumption = c("General", "Delta=0.8", "Delta=0.5", "Point ID"),
   lower = c(
-    fit_general$result$estimate[1],
-    fit_bounded_delta$result$estimate[1],
-    NA,  # Will compute below
+    fit_general$result$lower,
+    fit_bounded_delta$result$lower,
+    fit_delta_05$result$lower,
     NA   # Point estimate doesn't have bounds
   ),
   upper = c(
-    fit_general$result$estimate[2],
-    fit_bounded_delta$result$estimate[2],
-    NA,
+    fit_general$result$upper,
+    fit_bounded_delta$result$upper,
+    fit_delta_05$result$upper,
     NA
   ),
   point = c(NA, NA, NA, fit_point$result$estimate)
 )
-
-# Add delta=0.5 bounds
-fit_delta_05 <- mar_bounds(
-  dat, Y = "Y", A = "A", C = "C", X = "X",
-  estimand = "ate", assumption = "general",
-  delta_0 = 0.5, delta_1 = 0.5,
-  sl_lib = "SL.glm", V = 2, seed = 1
-)
-results$lower[3] <- fit_delta_05$result$estimate[1]
-results$upper[3] <- fit_delta_05$result$estimate[2]
 
 print(results)
 ```

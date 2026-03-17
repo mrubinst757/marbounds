@@ -13,7 +13,7 @@ suppressPackageStartupMessages(library(SuperLearner))
 
 
 ## -----------------------------------------------------------------------------
-set.seed(20240313)
+set.seed(20260313)
 n <- 1000
 
 X <- runif(n, -2, 2)
@@ -114,29 +114,29 @@ ggplot(upper_diag, aes(x = delta_0)) +
   theme_minimal()
 
 
-## ----eval = FALSE-------------------------------------------------------------
-# fit_risk_grid <- mar_bounds(
-#   dat,
-#   Y = "Y",
-#   A = "A",
-#   C = "C",
-#   X = "X",
-#   estimand = "ate",
-#   assumption = "bounded_risk",
-#   param_grid = list(
-#     delta_0u = seq(0.5, 1.0, by = 0.1),
-#     delta_1u = seq(0.5, 1.0, by = 0.1),
-#     tau_0 = c(1.5, 2.0, 2.5),
-#     tau_1 = c(1.5, 2.0, 2.5)
-#   ),
-#   sl_lib = "SL.glm",
-#   V = 2,
-#   B = 500,
-#   seed = 1
-# )
-# 
-# # This creates a 6 x 6 x 3 x 3 = 324 point grid
-# nrow(fit_risk_grid$lower_grid$grid)
+## ---- eval = FALSE------------------------------------------------------------
+## fit_risk_grid <- mar_bounds(
+##   dat,
+##   Y = "Y",
+##   A = "A",
+##   C = "C",
+##   X = "X",
+##   estimand = "ate",
+##   assumption = "bounded_risk",
+##   param_grid = list(
+##     delta_0u = seq(0.5, 1.0, by = 0.1),
+##     delta_1u = seq(0.5, 1.0, by = 0.1),
+##     tau_0 = c(1.5, 2.0, 2.5),
+##     tau_1 = c(1.5, 2.0, 2.5)
+##   ),
+##   sl_lib = "SL.glm",
+##   V = 2,
+##   B = 500,
+##   seed = 1
+## )
+## 
+## # This creates a 6 x 6 x 3 x 3 = 324 point grid
+## nrow(fit_risk_grid$lower_grid$grid)
 
 
 ## -----------------------------------------------------------------------------
@@ -230,30 +230,30 @@ cat("Uniform: ", nrow(significant_uniform), "out of", nrow(grid),
     "grid points exclude zero\n")
 
 
-## ----eval = FALSE-------------------------------------------------------------
-# # Quick exploration: B = 100-200
-# fit_quick <- mar_bounds(..., B = 100)
-# 
-# # Final analysis: B = 500-1000
-# fit_final <- mar_bounds(..., B = 1000)
+## ---- eval = FALSE------------------------------------------------------------
+## # Quick exploration: B = 100-200
+## fit_quick <- mar_bounds(..., B = 100)
+## 
+## # Final analysis: B = 500-1000
+## fit_final <- mar_bounds(..., B = 1000)
 
 
-## ----eval = FALSE-------------------------------------------------------------
-# # Coarse grid first
-# fit_coarse <- mar_bounds(
-#   ...,
-#   param_grid = list(
-#     delta_0 = seq(0.3, 1.0, by = 0.2),
-#     delta_1 = seq(0.3, 1.0, by = 0.2)
-#   )
-# )
-# 
-# # Fine grid in region of interest
-# fit_fine <- mar_bounds(
-#   ...,
-#   param_grid = list(
-#     delta_0 = seq(0.5, 0.8, by = 0.05),
-#     delta_1 = seq(0.5, 0.8, by = 0.05)
-#   )
-# )
+## ---- eval = FALSE------------------------------------------------------------
+## # Coarse grid first
+## fit_coarse <- mar_bounds(
+##   ...,
+##   param_grid = list(
+##     delta_0 = seq(0.3, 1.0, by = 0.2),
+##     delta_1 = seq(0.3, 1.0, by = 0.2)
+##   )
+## )
+## 
+## # Fine grid in region of interest
+## fit_fine <- mar_bounds(
+##   ...,
+##   param_grid = list(
+##     delta_0 = seq(0.5, 0.8, by = 0.05),
+##     delta_1 = seq(0.5, 0.8, by = 0.05)
+##   )
+## )
 
