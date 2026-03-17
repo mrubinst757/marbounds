@@ -258,6 +258,56 @@ fit_psi2 <- mar_bounds(
 fit_psi2$result
 ```
 
+## Smooth Approximation
+
+For `bounded_delta` (with Ψ₂) and `bounded_risk` assumptions, you can use smooth approximation instead of indicator functions. This replaces discontinuous indicator functions with smooth CDF approximations:
+
+```{r}
+# Bounded delta with smooth approximation
+fit_psi2_smooth <- mar_bounds(
+  dat,
+  Y = "Y",
+  A = "A",
+  C = "C",
+  X = "X",
+  estimand = "psi2",
+  assumption = "bounded_delta",
+  delta_0 = 0.5,
+  sl_lib = "SL.glm",
+  V = 2,
+  seed = 1,
+  smooth_approximation = TRUE,
+  epsilon = 0.001  # Smoothing parameter
+)
+
+# Bounded risk with smooth approximation
+fit_risk_smooth <- mar_bounds(
+  dat,
+  Y = "Y",
+  A = "A",
+  C = "C",
+  X = "X",
+  estimand = "ate",
+  assumption = "bounded_risk",
+  delta_0u = 0.8,
+  delta_1u = 0.8,
+  tau_0 = 2,
+  tau_1 = 2,
+  sl_lib = "SL.glm",
+  V = 2,
+  seed = 1,
+  smooth_approximation = TRUE,
+  epsilon = 0.001
+)
+```
+
+Smooth approximations:
+- Closely match indicator methods when `epsilon` is small (0.001-0.01)
+- Provide differentiable bounds for optimization
+- Are useful when discontinuous functions are problematic
+
+
+
 ## Customizing SuperLearner
 
 You can specify different libraries for different nuisance functions:
