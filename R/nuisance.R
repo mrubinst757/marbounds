@@ -56,14 +56,21 @@ estimate_nuisance <- function(X, A, C, Y,
       e[eval] <- clip_probs(mean(A))
     } else {
       fit_e <- tryCatch(
-        SuperLearner::SuperLearner(
-          Y = A[train],
-          X = as.data.frame(Xtrain),
-          newX = as.data.frame(Xeval),
-          family = "binomial",
-          SL.library = sl_lib_prop,
-          cvControl = list(V = 1)
-        ),
+        {
+          sink_conn <- textConnection("sink_output", "w", local = TRUE)
+          sink(sink_conn, type = "message")
+          on.exit({sink(type = "message"); close(sink_conn)}, add = TRUE)
+          suppressWarnings(
+            SuperLearner::SuperLearner(
+              Y = A[train],
+              X = as.data.frame(Xtrain),
+              newX = as.data.frame(Xeval),
+              family = "binomial",
+              SL.library = sl_lib_prop,
+              cvControl = list(V = 1)
+            )
+          )
+        },
         error = function(e) NULL
       )
       if (is.null(fit_e)) {
@@ -83,14 +90,21 @@ estimate_nuisance <- function(X, A, C, Y,
       }
       cv_v_a <- min(2L, max(1L, n_ia))
       fit_pi <- tryCatch(
-        SuperLearner::SuperLearner(
-          Y = C[ia],
-          X = as.data.frame(X[ia, , drop = FALSE]),
-          newX = as.data.frame(Xeval),
-          family = "binomial",
-          SL.library = sl_lib_miss,
-          cvControl = list(V = 1)
-        ),
+        {
+          sink_conn <- textConnection("sink_output", "w", local = TRUE)
+          sink(sink_conn, type = "message")
+          on.exit({sink(type = "message"); close(sink_conn)}, add = TRUE)
+          suppressWarnings(
+            SuperLearner::SuperLearner(
+              Y = C[ia],
+              X = as.data.frame(X[ia, , drop = FALSE]),
+              newX = as.data.frame(Xeval),
+              family = "binomial",
+              SL.library = sl_lib_miss,
+              cvControl = list(V = 1)
+            )
+          )
+        },
         error = function(e) NULL
       )
       if (is.null(fit_pi)) {
@@ -114,14 +128,21 @@ estimate_nuisance <- function(X, A, C, Y,
           next
         }
         fit_mu <- tryCatch(
-          SuperLearner::SuperLearner(
-            Y = Y_ia,
-            X = as.data.frame(X[ia, , drop = FALSE]),
-            newX = as.data.frame(Xeval),
-            family = family_Y,
-            SL.library = sl_lib_outcome,
-            cvControl = list(V = 1)
-          ),
+          {
+            sink_conn <- textConnection("sink_output", "w", local = TRUE)
+            sink(sink_conn, type = "message")
+            on.exit({sink(type = "message"); close(sink_conn)}, add = TRUE)
+            suppressWarnings(
+              SuperLearner::SuperLearner(
+                Y = Y_ia,
+                X = as.data.frame(X[ia, , drop = FALSE]),
+                newX = as.data.frame(Xeval),
+                family = family_Y,
+                SL.library = sl_lib_outcome,
+                cvControl = list(V = 1)
+              )
+            )
+          },
           error = function(e) NULL
         )
         if (is.null(fit_mu)) {
@@ -146,14 +167,21 @@ estimate_nuisance <- function(X, A, C, Y,
         mu1[eval] <- mu_pooled
       } else {
         fit_mu_pooled <- tryCatch(
-          SuperLearner::SuperLearner(
-            Y = Y_io,
-            X = as.data.frame(X[io, , drop = FALSE]),
-            newX = as.data.frame(Xeval),
-            family = family_Y,
-            SL.library = sl_lib_outcome,
-            cvControl = list(V = 1)
-          ),
+          {
+            sink_conn <- textConnection("sink_output", "w", local = TRUE)
+            sink(sink_conn, type = "message")
+            on.exit({sink(type = "message"); close(sink_conn)}, add = TRUE)
+            suppressWarnings(
+              SuperLearner::SuperLearner(
+                Y = Y_io,
+                X = as.data.frame(X[io, , drop = FALSE]),
+                newX = as.data.frame(Xeval),
+                family = family_Y,
+                SL.library = sl_lib_outcome,
+                cvControl = list(V = 1)
+              )
+            )
+          },
           error = function(e) NULL
         )
         if (is.null(fit_mu_pooled)) {
