@@ -93,8 +93,9 @@ test_that("mar_bounds param_grid returns lower_grid and upper_grid for Psi_1 bou
   expect_true("lower_grid" %in% names(fit))
   expect_true("upper_grid" %in% names(fit))
   g <- fit$lower_grid$grid
-  expect_true(all(c("estimate", "se_pointwise", "se_uniform", "ci_lower_pointwise", "ci_upper_pointwise",
-                    "ci_lower_uniform", "ci_upper_uniform") %in% names(g)))
+  expect_true(all(c("estimate", "se", "ci_lower_pointwise",
+                    "ci_upper_pointwise", "ci_lower_uniform",
+                    "ci_upper_uniform") %in% names(g)))
   expect_equal(nrow(g), 4L)
   expect_true(is.finite(fit$lower_grid$critical_value) && fit$lower_grid$critical_value > 0)
 })
@@ -174,7 +175,7 @@ test_that("mar_bounds param_grid returns estimate_grid for Psi_2 point_psi2", {
                     B = 50, seed = 1)
   expect_true("estimate_grid" %in% names(fit))
   g <- fit$estimate_grid$grid
-  expect_true(all(c("estimate", "se_pointwise", "se_uniform", "ci_lower_uniform", "ci_upper_uniform") %in% names(g)))
+  expect_true(all(c("estimate", "se", "ci_lower_uniform", "ci_upper_uniform") %in% names(g)))
   expect_equal(nrow(g), 3L)
 })
 

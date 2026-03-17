@@ -162,10 +162,10 @@ test_that("Uniform CIs are wider than pointwise CIs", {
 
   res <- fit$result
 
-  # Uniform SEs should be >= pointwise SEs
-  expect_true(all(res$se_uniform >= res$se_pointwise))
+  # SEs are the same for pointwise and uniform (only critical value differs)
+  expect_true("se" %in% names(res))
 
-  # Uniform intervals should be wider than pointwise intervals
+  # Uniform intervals should be wider than pointwise intervals (due to larger critical value)
   pointwise_width <- res$ci_upper_pointwise - res$ci_lower_pointwise
   uniform_width <- res$ci_upper_uniform - res$ci_lower_uniform
   expect_true(all(uniform_width >= pointwise_width))

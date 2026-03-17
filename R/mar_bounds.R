@@ -381,28 +381,26 @@ mar_bounds_grid_bands <- function(phi,
   }
 
   make_grid_result <- function(estimates, psi_mat, grid_df, critical_value = NULL) {
-    se_pt <- sqrt(apply(psi_mat, 2L, function(x) sum(x^2) / n) / n)
-    ci_lower_pt <- estimates - z * se_pt
-    ci_upper_pt <- estimates + z * se_pt
+    se <- sqrt(apply(psi_mat, 2L, function(x) sum(x^2) / n) / n)
+    ci_lower_pt <- estimates - z * se
+    ci_upper_pt <- estimates + z * se
     if (is.null(critical_value)) {
       critical_value <- compute_critical_value(list(psi_mat))
     }
-    ci_lower_unif <- estimates - critical_value * se_pt
-    ci_upper_unif <- estimates + critical_value * se_pt
-    se_unif <- critical_value * se_pt / z
+    ci_lower_unif <- estimates - critical_value * se
+    ci_upper_unif <- estimates + critical_value * se
 
     grid_out <- grid_df
     grid_out$estimate <- estimates
-    grid_out$se_pointwise <- se_pt
+    grid_out$se <- se
     grid_out$ci_lower_pointwise <- ci_lower_pt
     grid_out$ci_upper_pointwise <- ci_upper_pt
-    grid_out$se_uniform <- se_unif
     grid_out$ci_lower_uniform <- ci_lower_unif
     grid_out$ci_upper_uniform <- ci_upper_unif
 
     # Drop parameter columns that do not vary (i.e., the bound does not depend on them)
-    metric_cols <- c("estimate", "se_pointwise", "ci_lower_pointwise", "ci_upper_pointwise",
-                     "se_uniform", "ci_lower_uniform", "ci_upper_uniform")
+    metric_cols <- c("estimate", "se", "ci_lower_pointwise", "ci_upper_pointwise",
+                     "ci_lower_uniform", "ci_upper_uniform")
     param_cols <- setdiff(names(grid_out), metric_cols)
     if (length(param_cols) > 0) {
       const_params <- vapply(grid_out[param_cols], function(x) {

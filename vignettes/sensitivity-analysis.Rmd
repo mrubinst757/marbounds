@@ -85,8 +85,7 @@ head(fit_delta_grid$upper_grid$grid)
 Each row in the grid contains:
 - Parameter values (delta_0, delta_1)
 - `estimate`: The bound estimate
-- `se_pointwise`: Pointwise standard error
-- `se_uniform`: Uniform standard error (accounts for multiple testing)
+- `se`: Standard error (same for pointwise and uniform inference)
 - `ci_*_pointwise`: Pointwise confidence intervals
 - `ci_*_uniform`: Simultaneous confidence intervals
 
