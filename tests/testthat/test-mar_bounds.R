@@ -7,11 +7,11 @@ test_that("mar_bounds general ATE returns expected structure", {
                          V = 2, sl_lib = "SL.glm", seed = 1)
   skip_if(is.null(fit), "SuperLearner failed with small sample edge case")
 
-  expect_named(fit, c("naive", "lower", "upper", "se_lower", "se_upper", "nuisance", "phi", "estimand", "assumption", "result"))
+  expect_named(fit, c("nuisance", "phi", "estimand", "assumption", "result"))
   expect_equal(fit$estimand, "ate")
   expect_equal(fit$assumption, "general")
-  expect_true(fit$lower <= fit$upper)
-  expect_true(all(is.finite(c(fit$naive, fit$lower, fit$upper))))
+  expect_true(fit$result$lower <= fit$result$upper)
+  expect_true(all(is.finite(c(fit$result$naive, fit$result$lower, fit$result$upper))))
   expect_equal(nrow(fit$phi), 150)
   expect_equal(ncol(fit$phi), 6)
 })
@@ -77,7 +77,7 @@ test_that("psi_naive with precomputed nuisance matches mar_bounds naive", {
   skip_if(is.null(fit), "SuperLearner failed with small sample edge case")
 
   out <- psi_naive(dat, Y = "Y", A = "A", C = "C", X = "X", nuis = fit$nuisance)
-  expect_equal(unname(out$estimate), unname(fit$naive), tolerance = 1e-6)
+  expect_equal(unname(out$estimate), unname(fit$result$naive), tolerance = 1e-6)
 })
 
 test_that("mar_bounds param_grid returns lower_grid and upper_grid for Psi_1 bounded_delta", {
@@ -112,8 +112,8 @@ test_that("mar_bounds bounded_risk_unbounded_tau matches original coefficient bo
 
   expected <- marbounds:::compute_bounds(fit$phi, estimand = "ate", assumption = "bounded_risk_unbounded_tau",
                                          delta_0u = 0.3, delta_1u = 0.3, tau_0 = 2, tau_1 = 2)
-  expect_equal(fit$lower, expected$lower)
-  expect_equal(fit$upper, expected$upper)
+  expect_equal(fit$result$lower, expected$lower)
+  expect_equal(fit$result$upper, expected$upper)
 })
 
 test_that("mar_bounds param_grid accepts underscored and non-underscored delta naming", {
@@ -276,11 +276,11 @@ test_that("binary Y auto-detection warns and sets family to binomial", {
   suppressPackageStartupMessages(library(SuperLearner))
   dat <- make_test_data(n = 150)
 
-  # Y is binary, should warn
-  fit <- expect_warning(
+  # Y is binary, should auto-detect and warn
+  fit <- expect_message(
     safe_mar_bounds(dat, Y = "Y", A = "A", C = "C", X = "X",
                     estimand = "ate", assumption = "general",
-                    family_Y = "gaussian",  # explicitly set to gaussian
+                    # Don't set family_Y so auto-detection runs
                     V = 2, sl_lib = "SL.glm", seed = 1),
     "binary.*binomial"
   )

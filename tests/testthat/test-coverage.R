@@ -92,9 +92,9 @@ test_that("Pointwise CIs for bounds have correct structure", {
 
     # Check structure from result dataframe
     res <- fit$result
-    lower_in_ci <- lower_in_ci + (res$ci_lower_lower <= fit$lower && fit$lower <= res$ci_lower_upper)
-    upper_in_ci <- upper_in_ci + (res$ci_upper_lower <= fit$upper && fit$upper <= res$ci_upper_upper)
-    lower_le_upper <- lower_le_upper + (fit$lower <= fit$upper)
+    lower_in_ci <- lower_in_ci + (res$ci_lower_lower <= res$lower && res$lower <= res$ci_lower_upper)
+    upper_in_ci <- upper_in_ci + (res$ci_upper_lower <= res$upper && res$upper <= res$ci_upper_upper)
+    lower_le_upper <- lower_le_upper + (res$lower <= res$upper)
   }
 
   # All intervals should be well-formed
@@ -300,8 +300,8 @@ test_that("Result dataframe CI columns match direct CI computation", {
                     V = 2, sl_lib = "SL.glm", alpha = alpha, seed = 1)
 
   z <- qnorm(1 - alpha / 2)
-  expected_ci_lower <- fit$estimate - z * fit$se
-  expected_ci_upper <- fit$estimate + z * fit$se
+  expected_ci_lower <- fit$result$estimate - z * fit$result$se
+  expected_ci_upper <- fit$result$estimate + z * fit$result$se
 
   expect_equal(fit$result$ci_lower, expected_ci_lower, tolerance = 1e-10)
   expect_equal(fit$result$ci_upper, expected_ci_upper, tolerance = 1e-10)
@@ -312,10 +312,10 @@ test_that("Result dataframe CI columns match direct CI computation", {
                            delta_0 = 0.8, delta_1 = 0.8,
                            V = 2, sl_lib = "SL.glm", alpha = alpha, seed = 1)
 
-  expected_lower_ci_lower <- fit_bounds$lower - z * fit_bounds$se_lower
-  expected_lower_ci_upper <- fit_bounds$lower + z * fit_bounds$se_lower
-  expected_upper_ci_lower <- fit_bounds$upper - z * fit_bounds$se_upper
-  expected_upper_ci_upper <- fit_bounds$upper + z * fit_bounds$se_upper
+  expected_lower_ci_lower <- fit_bounds$result$lower - z * fit_bounds$result$se_lower
+  expected_lower_ci_upper <- fit_bounds$result$lower + z * fit_bounds$result$se_lower
+  expected_upper_ci_lower <- fit_bounds$result$upper - z * fit_bounds$result$se_upper
+  expected_upper_ci_upper <- fit_bounds$result$upper + z * fit_bounds$result$se_upper
 
   expect_equal(fit_bounds$result$ci_lower_lower, expected_lower_ci_lower, tolerance = 1e-10)
   expect_equal(fit_bounds$result$ci_lower_upper, expected_lower_ci_upper, tolerance = 1e-10)
