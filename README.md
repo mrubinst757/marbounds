@@ -15,7 +15,8 @@ R package implementing bounds on causal effects when outcomes are missing under 
 From source (in R):
 
 ```r
-install.packages("path/to/marbounds", repos = NULL, type = "source")
+# Install from r-universe
+install.packages('marbounds', repos = 'https://mrubinst757.r-universe.dev')
 ```
 
 Requires: `SuperLearner` (and its dependencies).

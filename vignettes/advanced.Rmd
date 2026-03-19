@@ -389,7 +389,7 @@ fit_small <- mar_bounds(
   dat,
   Y = "Y", A = "A", C = "C", X = "X",
   sl_lib = "SL.glm",  # Parametric only
-  V = 2,              # Minimal cross-fitting
+  V = 1,              # No cross-fitting
   B = 200,            # Fewer bootstrap replicates
   seed = 1
 )

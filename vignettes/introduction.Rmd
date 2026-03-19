@@ -33,9 +33,8 @@ The **marbounds** package implements methods for bounding causal effects when ou
 ## Installation
 
 ```{r, eval = FALSE}
-# Install from source
-install.packages("path/to/marbounds", repos = NULL, type = "source")
-```
+# Install from r-universe
+install.packages('marbounds', repos = 'https://mrubinst757.r-universe.dev')```
 
 Load the package and SuperLearner:
 
